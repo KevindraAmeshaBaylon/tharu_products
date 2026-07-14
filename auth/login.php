@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Welcome - Tharu Products</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root {
             --tharu-green: #2e7d32;
@@ -217,6 +217,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .signup-prompt a:hover {
             text-decoration: underline;
         }
+        .password-wrapper {
+        position: relative;
+        width: 100%;
+        margin-bottom: 15px;
+        }
+
+        .password-wrapper input {
+            width: 100%;
+            padding-right: 110px; /* Leaves space so text doesn't type over your icons */
+            box-sizing: border-box;
+        }
+
+        .password-actions {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 12px; /* Space between the eye button and 'Forgot?' */
+        }
+
+        .toggle-password {
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .toggle-password:hover {
+            color: #198754; /* Green accent on hover to match your layout theme */
+        }
+
+        .forgot-link {
+            color: #198754;
+            text-decoration: none;
+            font-weight: 500;
+        }
 
         /* Responsive Breakpoint Matrix */
         @media (max-width: 900px) {
@@ -256,8 +295,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Password Row with Integrated Trigger Link -->
             <div class="modern-input-box">
-                <input type="password" name="password" placeholder="Password" required>
-                <a href="#" class="forgot-link-inline">Forgot?</a>
+                <div class="password-wrapper">
+                    <input type="password" id="loginPassword" placeholder="Password" name="password" required>
+    
+                        <div class="password-actions">
+                        <!-- Eye toggle button -->
+                            <span class="toggle-password" onclick="togglePasswordVisibility()">
+                                <i class="bi bi-eye" id="toggleIcon"></i>
+                            </span>
+                        </div>
+                    </div>
             </div>
 
             <!-- Submission Trigger -->
@@ -270,7 +317,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
 </div>
-
+<script>
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById("loginPassword");
+    const toggleIcon = document.getElementById("toggleIcon");
+    
+    if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        // Changes eye icon to an eye-slash icon
+        toggleIcon.className = "bi bi-eye-slash";
+    } else {
+        passwordInput.type = "password";
+        // Changes back to regular eye icon
+        toggleIcon.className = "bi bi-eye";
+    }
+}
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

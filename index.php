@@ -1,7 +1,7 @@
 <?php
 // index.php
 session_start();
-require_once __DIR__ . '/config/database.example.php';
+require_once __DIR__ . '/model/config/database.php';
 
 if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
