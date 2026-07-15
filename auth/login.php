@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $password = trim($_POST['password']);
 
     if (!empty($username) && !empty($password)) {
-        $stmt = $conn->prepare("SELECT userID, username, password, email, publicCatalogID FROM user_tbl WHERE username = ? LIMIT 1");
+        $stmt = $conn->prepare("SELECT userID, username, password, email FROM user_tbl WHERE username = ? LIMIT 1");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -21,18 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($result && $result->num_rows === 1) {
             $user = $result->fetch_assoc();
             
-            if ($password === $user['password'] || password_verify($password, $user['password'])) {
+            if (password_verify($password, $user['password'])) {
                 $_SESSION['user_id'] = $user['userID'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['email'] = $user['email'];
-                $_SESSION['publicCatalogID'] = $user['publicCatalogID'];
-
-                // Clean redirect before any HTML breaks it
-                if (!empty($user['publicCatalogID'])) {
-                    header("Location: ../index.php");
-                } else {
-                    header("Location: ../dashboard.php");
-                }
+                header("Location: ../index.php");
                 exit;
             } else {
                 $error_message = "Invalid system credentials configuration provided.";
@@ -63,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
             $defaultCatalogID = 1; 
 
-            $insertStmt = $conn->prepare("INSERT INTO user_tbl (username, password, email, publicCatalogID) VALUES (?, ?, ?, ?)");
+            $insertStmt = $conn->prepare("INSERT INTO user_tbl (username, password, email) VALUES (?, ?, ?, ?)");
             $insertStmt->bind_param("sssi", $username, $hashedPassword, $email, $defaultCatalogID);
             
             if ($insertStmt->execute()) {

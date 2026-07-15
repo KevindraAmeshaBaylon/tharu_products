@@ -9,26 +9,22 @@ if (!isset($_SESSION['cart'])) {
 
 $conn = getDBConnection();
 
-// SELECT matching your exact database schema columns!
-$productQuery = "SELECT productID, name, unitprice, description, chickenfeed, pigfeed, cowfeed, batchID FROM product_tbl";
+$productQuery = "SELECT productID, name, type, unitprice, description FROM product_tbl";
 $productsResult = $conn->query($productQuery);
 
 // --- Handle AJAX Actions ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $id = intval($_POST['product_id']);
 
-    // Action 1: Add/Increase Item quantity by 1
     if ($_POST['action'] === 'add_to_cart') {
         $_SESSION['cart'][$id] = ($_SESSION['cart'][$id] ?? 0) + 1;
         echo json_encode(['status' => 'success', 'cart_count' => array_sum($_SESSION['cart'])]);
         exit;
     }
 
-    // Action 2: Decrease Item quantity by 1 (New!)
     if ($_POST['action'] === 'decrease_quantity') {
         if (isset($_SESSION['cart'][$id])) {
             $_SESSION['cart'][$id]--;
-            // If the quantity drops to 0 or below, remove the item completely from the cart
             if ($_SESSION['cart'][$id] <= 0) {
                 unset($_SESSION['cart'][$id]);
             }
@@ -37,10 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
-    // Action 3: Completely Purge/Remove Item (Updated!)
     if ($_POST['action'] === 'remove_from_cart') {
         if (isset($_SESSION['cart'][$id])) {
-            unset($_SESSION['cart'][$id]); // Removes the item completely from the session
+            unset($_SESSION['cart'][$id]);
         }
         echo json_encode(['status' => 'success', 'cart_count' => array_sum($_SESSION['cart'])]);
         exit;
@@ -50,146 +45,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
-<!-- Google Fonts for sharp UI look -->
+<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 
 <style>
     :root {
-        --forest-glow: #10b981;
-        --deep-forest: #064e3b;
-        --emerald-glass: rgba(16, 185, 129, 0.15);
-        --dark-bg: #09130e;
-        --card-bg-glass: rgba(255, 255, 255, 0.04);
-        --card-border-glass: rgba(255, 255, 255, 0.08);
+        --forest-brand: #059669; /* Richer green for better contrast on light bg */
+        --deep-forest: #022c22;  /* Used for dark elements like header and footer */
+        --mint-highlight: #10b981;
+        --glass-panel-bg: rgba(255, 255, 255, 0.75); /* Clean frosted white glass */
+        --glass-border: rgba(5, 150, 105, 0.18);
+        --text-dark: #0f172a;    /* High contrast near-black for body text */
+        --text-muted: #475569;   /* Readable gray for descriptions */
         --font-primary: 'Plus Jakarta Sans', sans-serif;
         --font-mono: 'Space Grotesk', sans-serif;
     }
 
+    html {
+        scroll-behavior: smooth;
+    }
+
     body {
-        background: radial-gradient(circle at top right, #0d2919, var(--dark-bg) 60%);
-        color: #e2e8f0;
+        /* Premium, bright, clean light-mint gradient background */
+        background-color: #f4fbf7;
+        background-image: 
+            radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
+            radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 50%),
+            linear-gradient(180deg, #f4fbf7 0%, #eaf5f0 100%);
+        background-attachment: fixed;
+        color: var(--text-dark);
         font-family: var(--font-primary);
         overflow-x: hidden;
     }
 
-    /* GLASSMORPHIC CONTAINER GLOBAL BASE */
-    .glass-panel {
-        background: var(--card-bg-glass);
-        backdrop-filter: blur(16px) saturate(120%);
-        -webkit-backdrop-filter: blur(16px) saturate(120%);
-        border: 1px solid var(--card-border-glass);
-        border-radius: 24px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Custom Logo Sizing */
+    .brand-logo-img {
+        height: 42px;
+        width: auto;
+        object-fit: contain;
     }
 
-    /* CONTRAST FIXES FOR THEMED PARAGRAPHS */
-    .glass-panel p,
-    .menu-card p {
-        color: #cbd5e1 !important;
-    }
-
-    .glass-panel .lead,
-    .glass-panel p.lead {
-        color: #e2e8f0 !important;
-    }
-
-    /* 1. STICKY TOP SCROLL NAV (GLASS STYLE) */
-    .sticky-scroll-nav {
-        position: fixed !important;
-        top: 0; left: 0; width: 100%; z-index: 1050;
-        transform: translateY(-100%); opacity: 0;
+    /* 1. SCROLL-ONLY DYNAMIC HEADER (DARK FOREST GREEN GLASS) */
+    .scroll-navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1050;
+        transform: translateY(-100%);
+        opacity: 0;
         transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
-        background: rgba(9, 19, 14, 0.7) !important;
+        background: rgba(2, 44, 34, 0.92) !important; /* Deep forest green */
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 2px solid var(--mint-highlight);
+        box-shadow: 0 10px 30px rgba(2, 44, 34, 0.15);
     }
-    .sticky-scroll-nav.show-nav {
-        transform: translateY(0); opacity: 1;
+    
+    .scroll-navbar.show-nav {
+        transform: translateY(0);
+        opacity: 1;
     }
 
-    /* 2. HERO BANNER DESIGN */
+    /* Ensures high visibility inside the dark green header */
+    .scroll-navbar .navbar-brand span {
+        color: #ffffff !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .scroll-navbar .nav-link {
+        color: rgba(255, 255, 255, 0.85) !important;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+    
+    .scroll-navbar .nav-link:hover {
+        color: var(--mint-highlight) !important;
+    }
+
+    /* 2. FROSTED GLASS PANELS ON LIGHT BG */
+    .glass-panel {
+        background: var(--glass-panel-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        box-shadow: 
+            0 10px 30px rgba(2, 44, 34, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        transition: all 0.3s ease;
+    }
+    
+    .glass-panel p {
+        color: var(--text-muted) !important;
+    }
+    
+    .glass-panel h2, .glass-panel h3, .glass-panel h5, .glass-panel h6 {
+        color: var(--deep-forest) !important;
+        font-weight: 700;
+    }
+
+    /* HERO STYLING */
     .hero-container {
-        position: relative;
-        padding: 8rem 0 6rem 0;
+        padding: 9rem 0 6rem 0;
         background: transparent;
     }
+    
     .hero-badge {
         font-family: var(--font-mono);
         letter-spacing: 2px;
-        background: rgba(16, 185, 129, 0.12);
-        color: var(--forest-glow);
-        border: 1px solid rgba(16, 185, 129, 0.3);
+        background: rgba(5, 150, 105, 0.1);
+        color: var(--forest-brand);
+        border: 1px solid rgba(5, 150, 105, 0.2);
         padding: 8px 16px;
         border-radius: 50px;
         font-size: 0.75rem;
         display: inline-block;
+        font-weight: 700;
     }
+    
     .hero-title {
-        font-family: var(--font-primary);
         font-weight: 800;
         font-size: 3.5rem;
         line-height: 1.15;
         letter-spacing: -2px;
-        background: linear-gradient(135deg, #ffffff 40%, #a7f3d0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: var(--deep-forest);
     }
 
-    /* 3. IMAGES GLOW WRAP */
-    .hero-image-wrap {
-        position: relative;
-    }
-    .hero-image-wrap::after {
-        content: '';
-        position: absolute;
-        top: 10%; left: 10%; width: 80%; height: 80%;
-        background: var(--forest-glow);
-        filter: blur(80px);
-        opacity: 0.25;
-        z-index: -1;
-    }
-    .hero-img {
-        border-radius: 32px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    /* 4. SECTIONS HEADINGS */
-    .section-title {
-        font-family: var(--font-mono);
-        color: var(--forest-glow);
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 3px;
-        display: block;
-    }
-
-    /* 5. DYNAMIC TACTILE GLASS BUTTONS */
+    /* DYNAMIC INTERACTION BUTTONS */
     .btn-forest {
-        background: rgba(16, 185, 129, 0.1);
-        color: #ffffff;
-        border: 1px solid rgba(16, 185, 129, 0.4);
-        font-weight: 600;
-        border-radius: 14px;
+        background: var(--forest-brand);
+        color: #ffffff !important;
+        font-weight: 700;
+        border-radius: 12px;
         padding: 10px 24px;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        font-family: var(--font-primary);
+        border: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.2);
     }
+    
     .btn-forest:hover {
-        background: rgba(16, 185, 129, 0.25);
-        color: #ffffff;
-        border-color: var(--forest-glow);
-        box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        background: var(--deep-forest);
+        box-shadow: 0 8px 25px rgba(2, 44, 34, 0.3);
+        transform: translateY(-2px);
     }
 
-    /* 6. COHESIVE CATEGORY PILLS */
+    /* FILTER PILLS */
     .category-pill {
-        border: 1px solid var(--card-border-glass);
-        background: rgba(255, 255, 255, 0.03);
-        color: #94a3b8;
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--text-muted);
         padding: 0.5rem 1.25rem;
         border-radius: 50px;
         font-size: 0.85rem;
@@ -197,313 +204,317 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         transition: all 0.2s ease;
         font-family: var(--font-mono);
     }
+    
     .category-pill.active, .category-pill:hover {
-        background: var(--forest-glow);
-        color: var(--dark-bg);
-        border-color: var(--forest-glow);
+        background: var(--forest-brand);
+        color: #ffffff;
+        border-color: var(--forest-brand);
         font-weight: bold;
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
     }
 
-    /* 7. HIGH-END GLASS CATALOG PRODUCT CARDS */
+    /* PRODUCT CATALOG CARDS */
     .menu-card {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid var(--card-border-glass);
+        background: var(--glass-panel-bg);
+        border: 1px solid var(--glass-border);
         border-radius: 24px;
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(2, 44, 34, 0.03);
     }
+    
     .menu-card:hover {
         transform: translateY(-8px);
-        background: rgba(255, 255, 255, 0.04);
-        border-color: rgba(16, 185, 129, 0.4);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 
-                    0 0 30px rgba(16, 185, 129, 0.05);
+        border-color: var(--forest-brand);
+        box-shadow: 0 15px 35px rgba(5, 150, 105, 0.12);
     }
+    
     .product-img-holder {
         height: 180px;
-        background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, rgba(0,0,0,0.15) 100%);
+        background: rgba(234, 245, 240, 0.6);
         border-radius: 18px;
-        border: 1px solid rgba(255,255,255,0.03);
+        border: 1px dashed var(--glass-border);
     }
 
-    /* 8. FEATURE SEGMENT BLOCK */
     .feature-icon-wrapper {
         width: 60px;
         height: 60px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(16, 185, 129, 0.08);
-        border: 1px solid rgba(16, 185, 129, 0.2);
+        background: rgba(5, 150, 105, 0.08);
+        border: 1px solid var(--glass-border);
         border-radius: 18px;
         font-size: 1.5rem;
         margin: 0 auto 1.25rem auto;
     }
 
-    /* 9. STICKY CART STYLE */
     .sticky-cart-card {
-        top: 7rem;
-        z-index: 10;
         position: -webkit-sticky;
         position: sticky;
+        top: 7rem;
+        z-index: 10;
+        border: 1px solid var(--glass-border);
+    }
+
+    /* 3. HIGH CONTRAST FOOTER & CONTACT INFO */
+    .footer-dark {
+        background: var(--deep-forest);
+        border-top: 3px solid var(--mint-highlight);
+        color: #e2e8f0 !important; /* Forces bright grey readability for body text */
     }
     
-    .cart-item-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        font-size: 0.9rem;
+    .footer-dark p, .footer-dark span {
+        color: #cbd5e1 !important; /* Absolute visibility guarantee */
+    }
+    
+    .footer-dark h6 {
+        color: #ffffff !important;
+        font-weight: 700;
+        letter-spacing: 1px;
     }
 </style>
 
-<!-- 1. SCROLL-ACTIVATED TOP BAR -->
-<nav id="landing-scroll-nav" class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-scroll-nav py-2">
+<!-- 1. SCROLL-ACTIVATED FULL WIDTH HEADER (DARK GREEN GLASS) -->
+<nav id="landing-scroll-nav" class="navbar navbar-expand-lg navbar-dark scroll-navbar py-3">
     <div class="container px-4">
-        <a class="navbar-brand fw-bold font-monospace text-white" href="#" style="font-family: var(--font-mono);">🌾 THARU & PRODUCTS</a>
-        <div class="ms-auto d-flex align-items-center gap-3">
-            <a href="#menu-catalog" class="btn btn-sm btn-outline-light px-3" style="border-radius: 10px;">Browse Menu</a>
-            <a href="auth/login.php" class="btn btn-sm btn-forest px-3">Sign In</a>
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold font-monospace" href="#">
+            <img src="images/LOGO.png" alt="Tharu Logo" class="brand-logo-img rounded">
+            <span>THARU & PRODUCTS</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navContent">
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-3">
+                <li class="nav-item"><a class="nav-link" href="#menu-catalog">Menu</a></li>
+                <li class="nav-item"><a class="nav-link" href="#about-section">About Us</a></li>
+                <li class="nav-item"><a class="nav-link" href="#contact-section">Contact Us</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-3">
+                <a href="auth/login.php" class="btn btn-sm btn-forest px-3">Sign In</a>
+            </div>
         </div>
     </div>
 </nav>
 
-<!-- 2. IMAGE HERO BANNER -->
+<!-- 2. HERO BANNER -->
 <div class="hero-container">
     <div class="container px-4">
         <div class="row align-items-center g-5">
             <div class="col-12 col-md-6">
+                
                 <span class="hero-badge mb-3">SYSTEM PROTOCOL DEPLOYED</span>
                 <h1 class="hero-title mt-2 mb-3">Premium Quality Animal Feed</h1>
-                <p class="lead mb-4" style="color: #cbd5e1;">Optimizing agricultural yields with modern automated silo processing and verifiable feed distribution chains.</p>
+                <p class="lead mb-4" style="color: var(--text-muted);">Optimizing agricultural yields with modern automated silo processing and verifiable feed distribution chains.</p>
                 <a href="#menu-catalog" class="btn btn-forest px-4 py-3 shadow">Order Online Now</a>
             </div>
             <div class="col-12 col-md-6 text-center">
-                <div class="hero-image-wrap">
-                    <img src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80" alt="Livestock Feed" class="img-fluid hero-img shadow-lg" style="max-height: 380px; object-fit: cover; width: 100%;">
+                <div class="hero-image-wrap position-relative">
+                    <img src="https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&w=600&q=80" alt="Livestock Feed" class="img-fluid rounded-4 shadow-md border" style="max-height: 380px; object-fit: cover; width: 100%; border-color: var(--glass-border) !important;">
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 3. FEATURE SEGMENT -->
-<div class="container py-5 my-3 text-center">
-    <span class="section-title">Features</span>
-    <h2 class="fw-bold text-white mt-1 mb-5" style="letter-spacing: -1px;">Why farmers trust our supply</h2>
-    <div class="row g-4 mt-2">
-        <div class="col-12 col-md-4">
-            <div class="glass-panel p-4 h-100">
-                <div class="feature-icon-wrapper">🌱</div>
-                <h5 class="fw-bold text-white">Always Fresh Ingredients</h5>
-                <p class="mb-0">Strict raw silo evaluations ensure batch quality remains consistent across operations.</p>
+<!-- MAIN LAYOUT BODY -->
+<div class="white-segment">
+    <!-- WHY FARMERS TRUST -->
+    <div class="container text-center mb-5">
+        <h2 class="fw-bold mb-5" style="letter-spacing: -1px; color: var(--deep-forest);">Why Farmers Trust Our Supply</h2>
+        <div class="row g-4 mt-2">
+            <div class="col-12 col-md-4">
+                <div class="glass-panel p-4 h-100">
+                    <div class="feature-icon-wrapper">🌱</div>
+                    <h5 class="fw-bold">Always Fresh Ingredients</h5>
+                    <p class="mb-0">Strict raw silo evaluations ensure batch quality remains consistent across operations.</p>
+                </div>
             </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="glass-panel p-4 h-100">
-                <div class="feature-icon-wrapper">📲</div>
-                <h5 class="fw-bold text-white">Easy Online Orders</h5>
-                <p class="mb-0">Registered corporate clients secure output batch allocations with real-time checkout pipelines.</p>
+            <div class="col-12 col-md-4">
+                <div class="glass-panel p-4 h-100">
+                    <div class="feature-icon-wrapper">📲</div>
+                    <h5 class="fw-bold">Easy Online Orders</h5>
+                    <p class="mb-0">Registered corporate clients secure output batch allocations with real-time checkout pipelines.</p>
+                </div>
             </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="glass-panel p-4 h-100">
-                <div class="feature-icon-wrapper">📋</div>
-                <h5 class="fw-bold text-white">Plenty to Choose From</h5>
-                <p class="mb-0">Our processing units handle mixed grain matrix ratios specialized for diverse livestock portfolios.</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 4. ABOUT US GLASS SECTION -->
-<section class="py-5" style="position: relative;">
-    <div class="container text-center">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 col-md-10 glass-panel p-5" style="background: rgba(16, 185, 129, 0.03); border-color: rgba(16,185,129,0.15);">
-                <h2 class="fw-bold text-white mb-3" style="letter-spacing: -0.5px;">About Us</h2>
-                <div style="width: 60px; height: 3px; background-color: var(--forest-glow); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
-                <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8;">
-                    Welcome to <strong class="text-white">Tharu Products</strong>. We are dedicated to pioneering the next generation of agricultural excellence by manufacturing and distributing premium, high-nutrition animal feed. By blending modern manufacturing techniques with wholesome, responsibly sourced grains, we empower farmers, distributors, and supply networks with the high-caliber resources needed to sustain healthy livestock and optimize yield operations.
-                </p>
+            <div class="col-12 col-md-4">
+                <div class="glass-panel p-4 h-100">
+                    <div class="feature-icon-wrapper">📋</div>
+                    <h5 class="fw-bold">Plenty to Choose From</h5>
+                    <p class="mb-0">Our processing units handle mixed grain matrix ratios specialized for diverse livestock portfolios.</p>
+                </div>
             </div>
         </div>
     </div>
-</section>
 
-<!-- 5. DUAL SIDE MENU DISPLAY -->
-<div class="container py-5 my-4" id="menu-catalog">
-    <div class="row g-4">
+    <!-- 3. ABOUT US SECTION (SMOOTH SCROLL TARGET) -->
+    <section class="py-5 mt-5" id="about-section">
+        <div class="container text-center">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-md-10 glass-panel p-5">
+                    <h2 class="fw-bold mb-3" style="letter-spacing: -0.5px;">About Us</h2>
+                    <div style="width: 60px; height: 3px; background-color: var(--forest-brand); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
+                    <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted) !important;">
+                        Welcome to <strong class="text-dark">Tharu Products</strong>. We are dedicated to pioneering the next generation of agricultural excellence by manufacturing and distributing premium, high-nutrition animal feed.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        <!-- LEFT COLUMN: Sticky Floating Cart (With Live Running Totals, Minus, & Purge Options) -->
-        <div class="col-12 col-lg-4">
-            <div class="glass-panel p-4 sticky-cart-card">
-                <h5 class="fw-bold text-white border-bottom pb-3 mb-3" style="font-family: var(--font-mono);">🛒 Your Cart</h5>
-                <?php if (empty($_SESSION['cart'])): ?>
-                    <p class="mb-0 py-2 text-white-50">Your Cart is empty. Select product bag variants from the menu matrix to populate.</p>
-                <?php else: ?>
-                    <div class="mb-3">
-                        <?php 
-                        $cartGrandTotal = 0; // Initialize total sum
-                        foreach($_SESSION['cart'] as $cartItemID => $quantity): 
-                            // Fetch item details instantly using correct primary key column: productID
-                            $itemStmt = $conn->prepare("SELECT name, unitprice FROM product_tbl WHERE productID = ?");
-                            $itemStmt->bind_param("i", $cartItemID);
-                            $itemStmt->execute();
-                            $itemRes = $itemStmt->get_result()->fetch_assoc();
-                            
-                            $itemNameResolved = $itemRes['name'] ?? "Product #$cartItemID";
-                            $itemPrice = $itemRes['unitprice'] ?? 0.00;
-                            $subtotal = $itemPrice * $quantity;
-                            $cartGrandTotal += $subtotal; // Add to running grand total
-                        ?>
-                            <div class="cart-item-row text-white-50 d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                <div style="max-width: 55%;">
-                                    <span class="text-white d-block fw-semibold" style="font-size: 0.9rem;"><?= htmlspecialchars($itemNameResolved) ?></span>
-                                    <span class="small" style="color: var(--forest-glow); font-family: var(--font-mono);">LKR <?= number_format($itemPrice, 2) ?> × <?= $quantity ?></span>
-                                </div>
-                                <div class="d-flex align-items-center gap-1">
-                                    <span class="badge bg-dark border border-secondary me-1" style="font-family: var(--font-mono);">LKR <?= number_format($subtotal, 2) ?></span>
-                                    
-                                    <!-- 1. Minus Button (Decrease quantity by 1) -->
-                                    <button onclick="decreaseQty(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-warning border-0 p-1 px-2" title="Decrease by 1" style="transition: transform 0.2s; font-size: 0.75rem;">
-                                        ➖
-                                    </button>
-                                    
-                                    <!-- 2. Trash Button (Purge item completely) -->
-                                    <button onclick="removeItem(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-danger border-0 p-1" title="Remove completely" style="transition: transform 0.2s; font-size: 0.85rem;">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <!-- Live Running Grand Total Box -->
-                    <div class="p-3 rounded mb-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--card-border-glass);">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="small text-white-50 font-monospace text-uppercase">Subtotal Balance:</span>
-                            <span class="fw-bold fs-5" style="color: var(--forest-glow); font-family: var(--font-mono);">LKR <?= number_format($cartGrandTotal, 2) ?></span>
-                        </div>
-                    </div>
-
-                    <div class="alert mb-3 text-center py-2 small" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--forest-glow);">
-                        ✓ Total Items: <?= array_sum($_SESSION['cart']) ?> Staged
-                    </div>
-
-                    <?php if (!isset($_SESSION['user_id'])): ?>
-                        <!-- If not logged in, send them straight to the Register/Sign Up tab on the login page -->
-                        <a href="auth/login.php?action=signup" class="btn btn-forest w-100 text-uppercase py-2.5 font-monospace">Proceed to Checkout</a>
+    <!-- 4. PRODUCT CATALOG GRID -->
+    <div class="container py-5" id="menu-catalog">
+        <div class="row g-4">
+            <!-- Left Sticky Cart -->
+            <div class="col-12 col-lg-4">
+                <div class="glass-panel p-4 sticky-cart-card">
+                    <h5 class="fw-bold border-bottom pb-3 mb-3" style="font-family: var(--font-mono);">🛒 Your Cart</h5>
+                    <?php if (empty($_SESSION['cart'])): ?>
+                        <p class="mb-0 py-2">Your Cart is empty. Select product variants to populate.</p>
                     <?php else: ?>
-                        <!-- If logged in, let them proceed normally -->
-                        <a href="auth/checkout_guard.php" class="btn btn-forest w-100 text-uppercase py-2.5 font-monospace">Proceed to Checkout</a>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
-        </div>
+                        <div class="mb-3">
+                            <?php 
+                            $cartGrandTotal = 0;
+                            foreach($_SESSION['cart'] as $cartItemID => $quantity): 
+                                $itemStmt = $conn->prepare("SELECT name, unitprice FROM product_tbl WHERE productID = ?");
+                                $itemStmt->bind_param("i", $cartItemID);
+                                $itemStmt->execute();
+                                $itemRes = $itemStmt->get_result()->fetch_assoc();
+                                
+                                $itemNameResolved = $itemRes['name'] ?? "Product #$cartItemID";
+                                $itemPrice = $itemRes['unitprice'] ?? 0.00;
+                                $subtotal = $itemPrice * $quantity;
+                                $cartGrandTotal += $subtotal;
+                            ?>
+                                <div class="d-flex justify-content-between align-items-center py-2" style="border-bottom: 1px solid rgba(5, 150, 105, 0.15);">
+                                    <div style="max-width: 55%;">
+                                        <span class="text-dark d-block fw-semibold" style="font-size: 0.9rem;"><?= htmlspecialchars($itemNameResolved) ?></span>
+                                        <span class="small text-success" style="font-family: var(--font-mono);">LKR <?= number_format($itemPrice, 2) ?> × <?= $quantity ?></span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button onclick="decreaseQty(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-warning border-0 p-1 px-2" title="Decrease by 1">➖</button>
+                                        <button onclick="removeItem(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-danger border-0 p-1" title="Remove completely">🗑️</button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
 
-        <!-- RIGHT COLUMN: Filter Header + Product Feed Grid -->
-        <div class="col-12 col-lg-8">
-            <!-- Dynamic Category Filters -->
-            <div class="glass-panel p-4 mb-4">
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <span class="small fw-bold text-white-50 me-2" style="font-family: var(--font-mono); letter-spacing: 1px;">FILTER:</span>
-                    <button class="category-pill active" onclick="filterCategory('all')">All Products</button>
-                    <button class="category-pill" onclick="filterCategory('chicken')">Poultry Feed</button>
-                    <button class="category-pill" onclick="filterCategory('pig')">Pig Feed</button>
-                    <button class="category-pill" onclick="filterCategory('cow')">Cattle Mash</button>
+                        <div class="p-3 rounded mb-3 bg-light border border-success">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted font-monospace text-uppercase">Subtotal:</span>
+                                <span class="fw-bold fs-5 text-success" style="font-family: var(--font-mono);">LKR <?= number_format($cartGrandTotal, 2) ?></span>
+                            </div>
+                        </div>
+
+                        <?php if (!isset($_SESSION['user_id'])): ?>
+                            <a href="auth/login.php?action=signup" class="btn btn-forest w-100 text-uppercase py-2.5 font-monospace">Proceed to Checkout</a>
+                        <?php else: ?>
+                            <a href="auth/checkout_guard.php" class="btn btn-forest w-100 text-uppercase py-2.5 font-monospace">Proceed to Checkout</a>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            <!-- Products Dynamic Grid -->
-            <div class="row g-3" id="products-grid">
-                <?php if ($productsResult && $productsResult->num_rows > 0): ?>
-                    <?php while ($prod = $productsResult->fetch_assoc()): ?>
-                        <!-- We use data attributes to store the category flags from your DB! -->
-                        <div class="col-12 col-sm-6 product-card-wrapper" 
-                             data-chicken="<?= $prod['chickenfeed'] ?>" 
-                             data-pig="<?= $prod['pigfeed'] ?>" 
-                             data-cow="<?= $prod['cowfeed'] ?>">
-                            
-                            <div class="menu-card p-3 d-flex flex-column justify-content-between h-100">
-                                <div>
-                                    <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center text-muted">
-                                        <span class="display-3" style="filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));">🌾</span>
+            <!-- Right Catalog List -->
+            <div class="col-12 col-lg-8">
+                <div class="glass-panel p-4 mb-4">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="small fw-bold text-dark me-2" style="font-family: var(--font-mono); letter-spacing: 1px;">FILTER:</span>
+                        <button class="category-pill active" onclick="filterCategory('all', event)">All Products</button>
+                        <button class="category-pill" onclick="filterCategory('poultry', event)">Poultry Feed</button>
+                        <button class="category-pill" onclick="filterCategory('pig', event)">Pig Feed</button>
+                        <button class="category-pill" onclick="filterCategory('cattle', event)">Cattle Mash</button>
+                    </div>
+                </div>
+
+                <div class="row g-3" id="products-grid">
+                    <?php if ($productsResult && $productsResult->num_rows > 0): ?>
+                        <?php while ($prod = $productsResult->fetch_assoc()): ?>
+                            <div class="col-12 col-sm-6 product-card-wrapper" data-category="<?= strtolower(htmlspecialchars($prod['type'] ?? 'all')) ?>">
+                                <div class="menu-card p-3 d-flex flex-column justify-content-between h-100">
+                                    <div>
+                                        <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center text-muted">
+                                            <span class="display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15));">🌾</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="fw-bold text-dark mb-0"><?= htmlspecialchars($prod['name']) ?></h6>
+                                            <span class="badge bg-transparent text-success border border-success font-monospace small">#PROD-<?= $prod['productID'] ?></span>
+                                        </div>
+                                        <p class="card-text mb-3 text-muted" style="font-size: 0.8rem; line-height: 1.5;">
+                                            <?= htmlspecialchars($prod['description'] ?? 'Wholesome formulation optimized for high performance and daily feed schedules.') ?>
+                                        </p>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="fw-bold text-white mb-0"><?= htmlspecialchars($prod['name']) ?></h6>
-                                        <span class="badge border font-monospace small" style="background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1) !important; color: var(--forest-glow);">#PROD-<?= $prod['productID'] ?></span>
+                                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid rgba(5, 150, 105, 0.15);">
+                                        <span class="fw-bold fs-5 text-dark" style="font-family: var(--font-mono);">LKR <?= number_format($prod['unitprice'], 2) ?></span>
+                                        <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest">+ Add Item</button>
                                     </div>
-                                    <p class="card-text mb-3" style="font-size: 0.8rem; line-height: 1.5;">
-                                        <?= htmlspecialchars($prod['description'] ?? 'Wholesome formulation optimized for high performance and daily feed schedules.') ?>
-                                    </p>
-                                    <p class="text-white-50 small mb-0">Batch ID: <strong class="text-white">#<?= htmlspecialchars($prod['batchID']) ?></strong></p>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.05);">
-                                    <span class="fw-bold fs-5" style="color: var(--forest-glow); font-family: var(--font-mono);">LKR <?= number_format($prod['unitprice'], 2) ?></span>
-                                    <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest">+ Add Item</button>
                                 </div>
                             </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <div class="col-12 text-center py-5 text-muted glass-panel">
+                            No products are currently available.
                         </div>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <div class="col-12 text-center py-5 text-muted glass-panel">
-                        No processing product lots are currently registered active in `product_tbl`.
-                    </div>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-
     </div>
 </div>
 
-<!-- 6. INLINE HTML FOOTER TAG -->
-<footer class="py-4 mt-5" style="background: rgba(5, 11, 8, 0.9); border-top: 1px solid rgba(255,255,255,0.06);">
-    <div class="container px-4 text-center text-md-start">
-        <div class="row align-items-center g-3">
-            <div class="col-12 col-md-6">
-                <span class="text-white fw-bold small" style="font-family: var(--font-mono); letter-spacing: 1px;">🌾 THARU SYSTEMS</span>
-                <span class="mx-2 text-white-50">|</span>
-                <span class="small text-white-50">&copy; <?= date('Y'); ?> All Rights Reserved.</span>
+<!-- 5. HIGH VISIBILITY FOOTER & CONTACT SECTION -->
+<footer class="footer-dark py-5 mt-auto" id="contact-section">
+    <div class="container px-4">
+        <div class="row g-4 align-items-center">
+            <!-- Footer Branding & Logo -->
+            <div class="col-12 col-md-4 text-center text-md-start">
+                <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-3">
+                    <img src="images/LOGO.png" alt="Tharu Logo" class="brand-logo-img rounded">
+                    <span class="text-white fw-bold font-monospace" style="letter-spacing: 1px;">THARU PRODUCTS</span>
+                </div>
+                <p class="small mb-0">&copy; <?= date('Y'); ?> Tharu & Products. All Rights Reserved. Engineered for excellence.</p>
             </div>
-            <div class="col-12 col-md-6 text-center text-md-end">
-                <a href="auth/login.php" class="text-white-50 text-decoration-none small hover-white" style="transition: color 0.2s;">Management Portal Login</a>
+
+            <!-- Contact Information Pane (Highly Visible Text) -->
+            <div class="col-12 col-md-4 text-center">
+                <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
+                <p class="small mb-1">📍 128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
+                <p class="small mb-1">✉️ support@tharufeedproducts.com</p>
+                <p class="small mb-0">📞 +94 11 2345 678</p>
+            </div>
+
+            <!-- Portal Shortcuts -->
+            <div class="col-12 col-md-4 text-center text-md-end">
+                <a href="#landing-scroll-nav" class="btn btn-sm btn-outline-light px-3 me-2 mb-2" style="border-radius: 10px;">Back to Top</a>
+                <a href="auth/login.php" class="btn btn-sm btn-forest px-3 mb-2">Management Portal Login</a>
             </div>
         </div>
     </div>
 </footer>
 
 <script>
-// Sticky Top scroll navigation active check
+// Header visibility rule: Show scroll nav only after passing 250px on scroll down
 window.addEventListener('scroll', function() {
     const scrollNav = document.getElementById('landing-scroll-nav');
-    if (scrollNav && window.scrollY > 350) {
-        scrollNav.classList.add('show-nav');
-    } else if (scrollNav) {
-        scrollNav.classList.remove('show-nav');
+    if (scrollNav) {
+        if (window.scrollY > 250) {
+            scrollNav.classList.add('show-nav');
+        } else {
+            scrollNav.classList.remove('show-nav');
+        }
     }
 });
 
-// Real-time client-side filter engine matching your exact database schema flags!
-function filterCategory(category) {
-    // Update active visual styles on filter pills
+function filterCategory(category, event) {
     const pills = document.querySelectorAll('.category-pill');
     pills.forEach(p => p.classList.remove('active'));
-    
-    // Set clicked pill active
     event.currentTarget.classList.add('active');
 
     const cards = document.querySelectorAll('.product-card-wrapper');
     cards.forEach(card => {
+        const productCategory = card.getAttribute('data-category');
         if (category === 'all') {
             card.style.display = 'block';
-        } else if (category === 'chicken' && card.getAttribute('data-chicken') === '1') {
-            card.style.display = 'block';
-        } else if (category === 'pig' && card.getAttribute('data-pig') === '1') {
-            card.style.display = 'block';
-        } else if (category === 'cow' && card.getAttribute('data-cow') === '1') {
+        } else if (productCategory.includes(category)) {
             card.style.display = 'block';
         } else {
             card.style.display = 'none';
@@ -511,7 +522,6 @@ function filterCategory(category) {
     });
 }
 
-// Quick-Add Cart Execution via AJAX
 function addUnit(productId) {
     const formData = new FormData();
     formData.append('action', 'add_to_cart');
@@ -521,15 +531,11 @@ function addUnit(productId) {
     .then(res => res.json())
     .then(data => {
         if(data.status === 'success') {
-            window.location.reload(); // Instantly syncs the UI and cart counters
+            window.location.reload();
         }
-    })
-    .catch(err => {
-        console.error('Error executing cart transaction:', err);
     });
 }
 
-// Quick-Remove Cart Execution via AJAX
 function removeItem(productId) {
     const formData = new FormData();
     formData.append('action', 'remove_from_cart');
@@ -539,15 +545,11 @@ function removeItem(productId) {
     .then(res => res.json())
     .then(data => {
         if(data.status === 'success') {
-            window.location.reload(); // Instantly reloads page to update running totals & display
+            window.location.reload();
         }
-    })
-    .catch(err => {
-        console.error('Error executing cart removal:', err);
     });
 }
 
-// Quick-Decrease Cart Quantity by 1 via AJAX
 function decreaseQty(productId) {
     const formData = new FormData();
     formData.append('action', 'decrease_quantity');
@@ -557,31 +559,8 @@ function decreaseQty(productId) {
     .then(res => res.json())
     .then(data => {
         if(data.status === 'success') {
-            window.location.reload(); // Instantly syncs UI layout
+            window.location.reload();
         }
-    })
-    .catch(err => {
-        console.error('Error executing quantity decrease:', err);
-    });
-}
-
-// Complete Purge of Cart Item via AJAX
-function removeItem(productId) {
-    const formData = new FormData();
-    formData.append('action', 'remove_from_cart');
-    formData.append('product_id', productId);
-
-    fetch('index.php', { method: 'POST', body: formData })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'success') {
-            window.location.reload(); // Instantly clears item from UI
-        }
-    })
-    .catch(err => {
-        console.error('Error executing complete cart purge:', err);
     });
 }
 </script>
-</body>
-</html>
