@@ -1,143 +1,199 @@
 <?php
-// customer/dashboard.php
+// auth/customer_dashboard.php
 session_start();
-require_once dirname(__DIR__) . '/config/database.example.php';
+require_once __DIR__ . '/../model/config/database.php';
 
-// Strict Session Guard Check
-if (!isset($_SESSION['user_id']) || $_SESSION['username'] !== 'customer01') {
-    header("Location: ../auth/login.php");
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
     exit;
 }
 
 $conn = getDBConnection();
 $userID = $_SESSION['user_id'];
 
-// 1. Fetch Customer Profile details matching Customer_tbl with error catch
-$custQuery = "SELECT customerID, companyname, contact, address FROM Customer_tbl WHERE userID = ?";
-$custStmt = $conn->prepare($custQuery);
+// Default viewing module
+$viewTab = $_GET['view'] ?? 'overview';
 
-if (!$custStmt) {
-    // If the database structure doesn't match, show us exactly what went wrong
-    die("<h4>Database Query Failure on Customer Registration Lookup:</h4>" . $conn->error . "<br><br>Please check if the columns inside <code>Customer_tbl</code> exactly match your database schema.");
+// Fetch Current User Details
+$userStmt = $conn->prepare("SELECT username, email FROM User_tbl WHERE userID = ?");
+$userStmt->bind_param("i", $userID);
+$userStmt->execute();
+$userProfile = $userStmt->get_result()->fetch_assoc();
+
+// Handle Order Placement & Payment Logic
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
+    $cart = $_SESSION['cart'] ?? [];
+    if (!empty($cart)) {
+        $totalAmount = floatval($_POST['total_amount']);
+        $address = htmlspecialchars($_POST['shipping_address']);
+        $paymentMethod = htmlspecialchars($_POST['payment_method']);
+        
+        $conn->begin_transaction();
+        try {
+            // 1. Insert Order
+            $orderQuery = "INSERT INTO Order_tbl (userID, totamtpaid, shipping_address, payment_method, status) VALUES (?, ?, ?, ?, 'Pending')";
+            $orderStmt = $conn->prepare($orderQuery);
+            $orderStmt->bind_param("idss", $userID, $totalAmount, $address, $paymentMethod);
+            $orderStmt->execute();
+            $orderID = $conn->insert_id;
+
+            // 2. Clear out checkout staging sessions
+            $_SESSION['cart'] = [];
+            $conn->commit();
+            $successMsg = "Order placed successfully! Order Reference ID: #ORD-" . $orderID;
+            $viewTab = 'history';
+        } catch (Exception $e) {
+            $conn->rollback();
+            $errorMsg = "Order placement transaction failed: " . $e->getMessage();
+        }
+    }
 }
-
-$custStmt->bind_param("i", $userID);
-$custStmt->execute();
-$customerResult = $custStmt->get_result();
-$customer = $customerResult->fetch_assoc();
-
-$customerID = $customer['customerID'] ?? 0;
-
-// 2. Query all Order logs connected to this Customer account
-$ordersQuery = "SELECT orderID, date, totamt, pending, processed, delivered, cancelled 
-                FROM Order_tbl 
-                WHERE customerID = ? 
-                ORDER BY date DESC";
-$ordersStmt = $conn->prepare($ordersQuery);
-
-if (!$ordersStmt) {
-    die("<h4>Database Query Failure on Order Log Lookup:</h4>" . $conn->error);
-}
-
-$ordersStmt->bind_param("i", $customerID);
-$ordersStmt->execute();
-$ordersResult = $ordersStmt->get_result();
 ?>
 
-<?php require_once dirname(__DIR__) . '/includes/header.php'; ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Customer Dashboard | Tharu Products</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f4f7f6;
+            color: #1e293b;
+        }
+        .sidebar {
+            height: 100vh;
+            background: #042f22;
+            color: #fff;
+            padding-top: 2rem;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.75);
+            margin: 0.5rem 1rem;
+            border-radius: 8px;
+        }
+        .sidebar .nav-link.active, .sidebar .nav-link:hover {
+            background: #10b981;
+            color: #fff;
+        }
+        .dashboard-container {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
 
-<!-- Top Navigation Module -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-forest shadow-sm">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand fw-bold" href="#">🌾 Customer Workspace</a>
-        <div class="ms-auto d-flex align-items-center gap-3">
-            <span class="badge bg-light text-success px-3 py-2 font-monospace fw-bold">
-                🏢 <?= htmlspecialchars($customer['companyname'] ?? 'Client Profile') ?>
-            </span>
-            <a class="btn btn-sm btn-outline-light" href="../auth/logout.php">Log Out</a>
-        </div>
-    </div>
-</nav>
-
-<div class="container-fluid px-4 my-4">
+<div class="container-fluid">
     <div class="row">
-        <!-- Profile Overview Sidebar -->
-        <div class="col-12 col-md-3 mb-4">
-            <div class="card border-0 shadow-sm p-4 bg-white rounded">
-                <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Client Details</h5>
-                <div class="small gap-2 d-flex flex-column">
-                    <div>
-                        <span class="text-muted d-block font-monospace text-uppercase" style="font-size: 0.75rem;">Contact Person</span>
-                        <strong class="text-dark"><?= htmlspecialchars($customer['contact'] ?? 'N/A') ?></strong>
-                    </div>
-                    <div>
-                        <span class="text-muted d-block font-monospace text-uppercase" style="font-size: 0.75rem;">Email Address</span>
-                        <strong class="text-dark"><?= htmlspecialchars($customer['email'] ?? 'N/A') ?></strong>
-                    </div>
-                    <div>
-                        <span class="text-muted d-block font-monospace text-uppercase" style="font-size: 0.75rem;">Shipping Destination</span>
-                        <strong class="text-dark"><?= htmlspecialchars($customer['address'] ?? 'N/A') ?></strong>
-                    </div>
-                </div>
+        <!-- Dashboard Left Sidebar -->
+        <div class="col-md-3 col-lg-2 sidebar">
+            <h5 class="text-center fw-bold mb-4">🌾 MY PORTAL</h5>
+            <div class="nav flex-column nav-pills">
+                <a href="?view=overview" class="nav-link <?= $viewTab === 'overview' ? 'active' : '' ?>">Overview</a>
+                <a href="?view=checkout" class="nav-link <?= $viewTab === 'checkout' ? 'active' : '' ?>">Place Order & Pay</a>
+                <a href="../index.php" class="nav-link">Back to Catalog</a>
+                <a href="logout.php" class="nav-link text-danger mt-5">Log Out</a>
             </div>
         </div>
 
-        <!-- Main Dashboard Activity Workspace -->
-        <div class="col-12 col-md-9">
-            <div class="mb-4">
-                <h2 class="fw-bold text-dark">Purchasing & Delivery Tracking</h2>
-                <p class="text-muted small">Monitor dispatch pipeline progress, historical transaction values, and fulfillment states live.</p>
-            </div>
+        <!-- Dashboard Content pane -->
+        <div class="col-md-9 col-lg-10 px-md-4">
+            <div class="dashboard-container">
+                <?php if (isset($successMsg)): ?>
+                    <div class="alert alert-success"><?= $successMsg ?></div>
+                <?php endif; ?>
+                <?php if (isset($errorMsg)): ?>
+                    <div class="alert alert-danger"><?= $errorMsg ?></div>
+                <?php endif; ?>
 
-            <!-- Orders Activity Table Component -->
-            <div class="card border-0 shadow-sm rounded bg-white">
-                <div class="card-header bg-white py-3 border-bottom">
-                    <h5 class="mb-0 fw-bold text-dark">Your Historic Supply Orders</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light text-secondary font-monospace small">
-                                <tr>
-                                    <th class="ps-4">Order Ref</th>
-                                    <th>Date Generated</th>
-                                    <th>Total Value</th>
-                                    <th class="text-center">Fulfillment Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($ordersResult && $ordersResult->num_rows > 0): ?>
-                                    <?php while ($order = $ordersResult->fetch_assoc()): ?>
-                                        <tr>
-                                            <td class="ps-4 fw-bold text-dark">#ORD-<?= $order['orderID'] ?></td>
-                                            <td class="text-secondary small"><?= htmlspecialchars($order['date']) ?></td>
-                                            <td class="fw-bold text-emerald">LKR <?= number_format($order['totamt'], 2) ?></td>
-                                            <td class="text-center">
-                                                <?php if ($order['cancelled'] == 1): ?>
-                                                    <span class="badge bg-danger rounded-pill px-3 py-1.5 small">Cancelled</span>
-                                                <?php elseif ($order['delivered'] == 1): ?>
-                                                    <span class="badge bg-success rounded-pill px-3 py-1.5 small">Delivered</span>
-                                                <?php elseif ($order['processed'] == 1): ?>
-                                                    <span class="badge bg-primary rounded-pill px-3 py-1.5 small">Processed</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 small">Pending</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" class="text-center py-4 text-muted small">No personal order lines currently tracked to this business unit.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                <?php if ($viewTab === 'overview'): ?>
+                    <h3>Welcome back, <?= htmlspecialchars($userProfile['username'] ?? 'User') ?>!</h3>
+                    <p class="text-muted">Manage your livestock supply orders and manage accounts from this panel.</p>
+                    <hr>
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6">
+                            <div class="p-4 bg-light rounded border">
+                                <h5>Account Information</h5>
+                                <p class="mb-1"><strong>Email:</strong> <?= htmlspecialchars($userProfile['email'] ?? 'Not Assigned') ?></p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
+                <?php elseif ($viewTab === 'checkout'): ?>
+                    <h3>Complete Checkout & Make Payment</h3>
+                    <p class="text-muted">Review items staging inside your cart session to initiate feed procurement procedures.</p>
+                    <hr>
+
+                    <?php if (empty($_SESSION['cart'])): ?>
+                        <div class="alert alert-info text-center py-4">
+                            Your checkout queue is currently empty. <a href="../index.php">Go back and select some items</a>.
+                        </div>
+                    <?php else: ?>
+                        <div class="row g-4">
+                            <div class="col-md-7">
+                                <form method="POST">
+                                    <h5 class="mb-3">Shipping & Payment Form</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Shipping / Delivery Address</label>
+                                        <textarea class="form-control" name="shipping_address" rows="3" placeholder="Enter full delivery coordinates..." required></textarea>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Payment Method</label>
+                                        <select class="form-select" name="payment_method" required>
+                                            <option value="Bank Transfer">Bank Wire Transfer</option>
+                                            <option value="Cash on Delivery">Cash on Delivery</option>
+                                        </select>
+                                    </div>
+
+                                    <?php 
+                                    $checkoutTotal = 0;
+                                    foreach($_SESSION['cart'] as $id => $qty) {
+                                        $pStmt = $conn->prepare("SELECT unitprice FROM product_tbl WHERE productID = ?");
+                                        $pStmt->bind_param("i", $id);
+                                        $pStmt->execute();
+                                        $res = $pStmt->get_result()->fetch_assoc();
+                                        $checkoutTotal += ($res['unitprice'] ?? 0) * $qty;
+                                    }
+                                    ?>
+                                    <input type="hidden" name="total_amount" value="<?= $checkoutTotal ?>">
+
+                                    <button type="submit" name="place_order" class="btn btn-forest w-100 py-3">
+                                        Confirm Payment & Place Order (LKR <?= number_format($checkoutTotal, 2) ?>)
+                                    </button>
+                                </form>
+                            </div>
+
+                            <div class="col-md-5">
+                                <div class="p-3 bg-light rounded border">
+                                    <h6 class="fw-bold mb-3">Order Summary</h6>
+                                    <?php foreach($_SESSION['cart'] as $id => $qty): 
+                                        $pStmt = $conn->prepare("SELECT name, unitprice FROM product_tbl WHERE productID = ?");
+                                        $pStmt->bind_param("i", $id);
+                                        $pStmt->execute();
+                                        $prod = $pStmt->get_result()->fetch_assoc();
+                                    ?>
+                                        <div class="d-flex justify-content-between small border-bottom py-2">
+                                            <span><?= htmlspecialchars($prod['name']) ?> (x<?= $qty ?>)</span>
+                                            <strong>LKR <?= number_format($prod['unitprice'] * $qty, 2) ?></strong>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+</body>
+</html>
