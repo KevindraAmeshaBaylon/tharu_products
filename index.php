@@ -475,7 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
 
             <!-- Contact Information Pane (Highly Visible Text) -->
-            <div class="col-12 col-md-4 text-center">
+            <div class="col-12 col-md-4 text-right">
                 <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
                 <p class="small mb-1">📍 128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
                 <p class="small mb-1">✉️ support@tharufeedproducts.com</p>
