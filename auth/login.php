@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $dashboardFile = 'acc_dashboard.php';
                         break;
                     case 'salessup':
-                        $dashboardFile = 'salessup_dashboard.php';
+                        $dashboardFile = 'salessup/dashboard.php';
                         break;
                     case 'worker':
                         $dashboardFile = 'worker_dashboard.php';
