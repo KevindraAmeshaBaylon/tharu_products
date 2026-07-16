@@ -85,7 +85,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <div class="sidebar-panel">
     <div>
         <div class="d-flex align-items-center gap-2 px-2 mb-4">
-            <span class="fs-4">🌾</span>
+            <img src="../../images/LOGO.png" alt="Tharu Logo" style="height: 80px; width: auto; border-radius: 5px;">
             <h5 class="fw-bold mb-0 text-white font-monospace">SALES SUPERVISOR</h5>
         </div>
         <hr style="border-color: rgba(255,255,255,0.1);">
@@ -97,7 +97,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="stock_levels.php" class="nav-dash-link <?php echo ($currentPage == 'stock_levels.php') ? 'active' : ''; ?>">📈 Stock Levels</a>
             <a href="sold_units.php" class="nav-dash-link <?php echo ($currentPage == 'sold_units.php') ? 'active' : ''; ?>">🏷️ Sold Units</a>
             <a href="delivery_assignment.php" class="nav-dash-link <?php echo ($currentPage == 'delivery_assignment.php') ? 'active' : ''; ?>">🚚 Delivery Assignment</a>
-            <a href="record_income.php" class="nav-dash-link <?php echo ($currentPage == 'record_income.php') ? 'active' : ''; ?>">💰 Record Income</a>
             <a href="sales_reports.php" class="nav-dash-link <?php echo ($currentPage == 'sales_reports.php') ? 'active' : ''; ?>">📄 Sales Reports</a>
         </div>
     </div>
