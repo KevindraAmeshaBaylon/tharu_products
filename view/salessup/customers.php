@@ -6,26 +6,44 @@ require_once '../../model/config/database.php';
 $conn = getDBConnection();
 
 // --- VERY BASIC BACKEND LOGIC ---
+
+// 1. Handle Customer Profile Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_customer'])) {
-    
-    // 1. Get data from form and make it safe
     $id = $conn->real_escape_string($_POST['customerID']);
     $nic = $conn->real_escape_string($_POST['customerNIC']);
     $name = $conn->real_escape_string($_POST['companyname']);
     $address = $conn->real_escape_string($_POST['address']);
 
-    // 2. Simple UPDATE query
     $sql = "UPDATE Customer_tbl SET customerNIC='$nic', companyname='$name', address='$address' WHERE customerID='$id'";
     $conn->query($sql);
     
-    // Refresh the page
     header("Location: customers.php");
     exit();
 }
 
-// 3. Simple SELECT query
+// 2. Handle Inquiry Response
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['respond_inquiry'])) {
+    $inquiryID = $conn->real_escape_string($_POST['inquiryID']);
+    $response = $conn->real_escape_string($_POST['response']);
+
+    // Update the inquiry with the response and change flags
+    $sql = "UPDATE Inquiry_tbl SET response='$response', pending=0, answered=1 WHERE inquiryID='$inquiryID'";
+    $conn->query($sql);
+    
+    header("Location: customers.php");
+    exit();
+}
+
+// 3. Fetch Customers
 $sql = "SELECT * FROM Customer_tbl";
 $result = $conn->query($sql);
+
+// 4. Fetch Inquiries with Customer Names
+$inquirySql = "SELECT i.inquiryID, i.message, i.response, i.pending, i.answered, c.companyname 
+               FROM Inquiry_tbl i
+               JOIN Customer_tbl c ON i.customerID = c.customerID
+               ORDER BY i.pending DESC, i.inquiryID DESC";
+$inquiryResult = $conn->query($inquirySql);
 
 $conn->close();
 ?>
@@ -35,7 +53,7 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Customers - Tharu Systems</title>
+    <title>Manage Customers & Inquiries - Tharu Systems</title>
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -48,6 +66,7 @@ $conn->close();
             padding: 1.5rem;
             border: 1px solid #eef2f0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            margin-bottom: 25px;
         }
 
         .custom-table th {
@@ -81,6 +100,9 @@ $conn->close();
             color: #ffffff;
         }
 
+        .badge-pending { background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; }
+        .badge-answered { background-color: #198754; color: white; padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; }
+
         /* Simple Custom Modal Overlay */
         .custom-modal-overlay {
             display: none; 
@@ -112,12 +134,13 @@ $conn->close();
 
     <!-- Main Content Area -->
     <div class="main-content">
+        
+        <!-- SECTION 1: CUSTOMER PROFILES -->
         <div class="mb-4">
             <h3 class="fw-bold text-dark mb-1">Customer Profiles</h3>
             <span class="text-muted small">View and update client corporate information</span>
         </div>
 
-        <!-- White Card Container -->
         <div class="content-card">
             <div class="table-responsive">
                 <table class="table custom-table mb-0">
@@ -141,7 +164,6 @@ $conn->close();
                             <td class="fw-bold text-dark"><?php echo htmlspecialchars($row['companyname']); ?></td>
                             <td><?php echo htmlspecialchars($row['address']); ?></td>
                             <td>
-                                <!-- Simple Javascript trigger for the edit form -->
                                 <button class="btn btn-sm btn-forest px-3" onclick="openEditForm(
                                     '<?php echo $row['customerID']; ?>', 
                                     '<?php echo htmlspecialchars(addslashes($row['customerNIC'])); ?>', 
@@ -160,33 +182,79 @@ $conn->close();
                 </table>
             </div>
         </div>
+
+        <!-- SECTION 2: CUSTOMER INQUIRIES -->
+        <div class="mb-4 mt-5">
+            <h3 class="fw-bold text-dark mb-1">Customer Inquiries</h3>
+            <span class="text-muted small">Read and respond to messages from your clients</span>
+        </div>
+
+        <div class="content-card">
+            <div class="table-responsive">
+                <table class="table custom-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>INQ ID</th>
+                            <th>CUSTOMER</th>
+                            <th>MESSAGE</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        if ($inquiryResult && $inquiryResult->num_rows > 0) {
+                            while($inq = $inquiryResult->fetch_assoc()) { 
+                                $statusBadge = $inq['pending'] == 1 ? '<span class="badge-pending">Pending</span>' : '<span class="badge-answered">Answered</span>';
+                        ?>
+                        <tr>
+                            <td><span class="font-monospace text-muted fw-bold">#INQ-<?php echo $inq['inquiryID']; ?></span></td>
+                            <td class="fw-bold text-dark"><?php echo htmlspecialchars($inq['companyname']); ?></td>
+                            <td><?php echo htmlspecialchars($inq['message']); ?></td>
+                            <td><?php echo $statusBadge; ?></td>
+                            <td>
+                                <button class="btn btn-sm <?php echo $inq['pending'] == 1 ? 'btn-forest' : 'btn-secondary'; ?> px-3" onclick="openRespondForm(
+                                    '<?php echo $inq['inquiryID']; ?>', 
+                                    '<?php echo htmlspecialchars(addslashes($inq['companyname'])); ?>', 
+                                    '<?php echo htmlspecialchars(addslashes($inq['message'])); ?>', 
+                                    '<?php echo htmlspecialchars(addslashes($inq['response'] ?? '')); ?>'
+                                )">
+                                    <?php echo $inq['pending'] == 1 ? '✉️ Respond' : '👁️ View / Edit'; ?>
+                                </button>
+                            </td>
+                        </tr>
+                        <?php 
+                            }
+                        } else {
+                            echo "<tr><td colspan='5' class='text-center py-4 text-muted'>No inquiries found in database.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- Simple Custom Modal for Updating -->
+<!-- Modal for Updating Customer -->
 <div id="editCustomerModal" class="custom-modal-overlay">
     <div class="custom-modal-box">
         <h4 class="text-dark mb-4 fw-bold">Update Customer Profile</h4>
-        
-        <!-- Basic HTML Form -->
         <form method="POST" action="customers.php">
             <input type="hidden" id="edit_id" name="customerID">
-            
             <div class="mb-3">
                 <label class="form-label text-muted small fw-bold">National ID (NIC)</label>
                 <input type="text" class="form-control bg-light" id="edit_nic" name="customerNIC" required>
             </div>
-            
             <div class="mb-3">
                 <label class="form-label text-muted small fw-bold">Company Name</label>
                 <input type="text" class="form-control bg-light" id="edit_name" name="companyname" required>
             </div>
-            
             <div class="mb-4">
                 <label class="form-label text-muted small fw-bold">Billing Address</label>
                 <input type="text" class="form-control bg-light" id="edit_address" name="address" required>
             </div>
-            
             <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-light border px-4" onclick="closeEditForm()">Cancel</button>
                 <button type="submit" name="update_customer" class="btn btn-forest px-4">Save Changes</button>
@@ -195,19 +263,58 @@ $conn->close();
     </div>
 </div>
 
-<!-- Very Simple Javascript to handle the form popup -->
+<!-- Modal for Responding to Inquiry -->
+<div id="respondInquiryModal" class="custom-modal-overlay">
+    <div class="custom-modal-box">
+        <h4 class="text-dark mb-2 fw-bold">Inquiry Response</h4>
+        <p class="text-muted small mb-4">Responding to: <span id="inq_customer_name" class="fw-bold text-dark"></span></p>
+        
+        <form method="POST" action="customers.php">
+            <input type="hidden" id="inq_id" name="inquiryID">
+            
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">Customer's Message</label>
+                <textarea class="form-control bg-light" id="inq_message" rows="3" disabled></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label text-muted small fw-bold">Your Response</label>
+                <textarea class="form-control" id="inq_response" name="response" rows="4" required placeholder="Type your response here..."></textarea>
+            </div>
+            
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-light border px-4" onclick="closeRespondForm()">Cancel</button>
+                <button type="submit" name="respond_inquiry" class="btn btn-forest px-4">Submit Response</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+    // Functions for Customer Edit Modal
     function openEditForm(id, nic, name, address) {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_nic').value = nic;
         document.getElementById('edit_name').value = name;
         document.getElementById('edit_address').value = address;
-        
         document.getElementById('editCustomerModal').style.display = 'flex';
     }
 
     function closeEditForm() {
         document.getElementById('editCustomerModal').style.display = 'none';
+    }
+
+    // Functions for Inquiry Response Modal
+    function openRespondForm(id, customerName, message, response) {
+        document.getElementById('inq_id').value = id;
+        document.getElementById('inq_customer_name').innerText = customerName;
+        document.getElementById('inq_message').value = message;
+        document.getElementById('inq_response').value = response;
+        document.getElementById('respondInquiryModal').style.display = 'flex';
+    }
+
+    function closeRespondForm() {
+        document.getElementById('respondInquiryModal').style.display = 'none';
     }
 </script>
 

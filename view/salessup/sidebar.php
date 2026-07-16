@@ -97,6 +97,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="stock_levels.php" class="nav-dash-link <?php echo ($currentPage == 'stock_levels.php') ? 'active' : ''; ?>">📈 Stock Levels</a>
             <a href="sold_units.php" class="nav-dash-link <?php echo ($currentPage == 'sold_units.php') ? 'active' : ''; ?>">🏷️ Sold Units</a>
             <a href="delivery_assignment.php" class="nav-dash-link <?php echo ($currentPage == 'delivery_assignment.php') ? 'active' : ''; ?>">🚚 Delivery Assignment</a>
+            <a href="drivers.php" class="nav-dash-link <?php echo ($currentPage == 'drivers.php') ? 'active' : ''; ?>">🚐 Drivers</a>
             <a href="sales_reports.php" class="nav-dash-link <?php echo ($currentPage == 'sales_reports.php') ? 'active' : ''; ?>">📄 Sales Reports</a>
         </div>
     </div>
