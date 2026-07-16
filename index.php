@@ -130,14 +130,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     /* 2. FROSTED GLASS PANELS ON LIGHT BG */
     .glass-panel {
-        background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(240,253,244,0.62));
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
-        border: 1px solid var(--glass-border);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(240, 253, 244, 0.35)) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
         border-radius: 24px;
         box-shadow:
-            0 16px 36px rgba(2, 44, 34, 0.08),
-            inset 0 1px 0 rgba(255,255,255,0.75);
+            0 16px 40px rgba(2, 44, 34, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
         transition: all 0.3s ease;
     }
     
@@ -225,29 +225,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     /* DYNAMIC INTERACTION BUTTONS */
     .btn-forest {
-        background: linear-gradient(135deg, var(--forest-brand), var(--mint-highlight));
-        color: #ffffff !important;
-        font-weight: 700;
-        border-radius: 12px;
-        padding: 10px 24px;
-        border: none;
-        transition: all 0.2s ease;
-        box-shadow: 0 8px 24px rgba(15, 118, 110, 0.22);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: rgba(52, 211, 153, 0.25) !important;
+        backdrop-filter: blur(12px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+        border: 2px solid rgba(52, 211, 153, 0.6) !important;
+        color: #064e3b !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        padding: 10px 24px !important;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.15) !important;
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4) !important;
     }
     
     .btn-forest:hover {
-        background: linear-gradient(135deg, var(--deep-forest), var(--forest-brand));
-        box-shadow: 0 12px 28px rgba(5, 46, 43, 0.24);
-        transform: translateY(-2px);
+        background: rgba(52, 211, 153, 0.45) !important;
+        border-color: rgba(52, 211, 153, 0.9) !important;
+        color: #022c22 !important;
+        box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.25) !important;
+        transform: translateY(-2px) !important;
+    }
+
+    .btn-forest:active {
+        background: rgba(52, 211, 153, 0.6) !important;
+        transform: scale(0.96) translateY(-1px) !important;
+        box-shadow: 0 4px 16px 0 rgba(16, 185, 129, 0.2) !important;
+    }
+
+    /* SPECIFIC RULES FOR BUTTONS INSIDE DARK NAVBAR */
+    .scroll-navbar .btn-forest {
+        color: #ffffff !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+        border-color: rgba(52, 211, 153, 0.8) !important;
+        background: rgba(52, 211, 153, 0.3) !important;
+    }
+    
+    .scroll-navbar .btn-forest:hover {
+        color: #ffffff !important;
+        background: rgba(52, 211, 153, 0.5) !important;
+        border-color: #34d399 !important;
     }
 
     /* FILTER PILLS */
     .category-pill {
-        border: 1px solid rgba(5, 150, 105, 0.18);
-        background: linear-gradient(135deg, rgba(255,255,255,0.76), rgba(236,253,245,0.7));
-        color: var(--text-muted);
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
+        background: rgba(255, 255, 255, 0.35) !important;
+        color: var(--text-dark) !important;
         padding: 0.55rem 1.2rem;
         border-radius: 50px;
         font-size: 0.85rem;
@@ -260,35 +283,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
     
     .category-pill.active, .category-pill:hover {
-        background: linear-gradient(135deg, rgba(6, 95, 70, 0.95), rgba(16, 185, 129, 0.9));
-        color: #ffffff;
-        border-color: rgba(16, 185, 129, 0.6);
+        background: rgba(16, 185, 129, 0.75) !important;
+        color: #ffffff !important;
+        border-color: rgba(16, 185, 129, 0.9) !important;
         font-weight: bold;
-        box-shadow: 0 10px 24px rgba(6, 95, 70, 0.22);
+        box-shadow: 0 10px 24px rgba(16, 185, 129, 0.3) !important;
     }
 
     /* PRODUCT CATALOG CARDS */
     .menu-card {
-        background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(229,248,238,0.7));
-        border: 1px solid var(--glass-border);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(229, 248, 238, 0.35)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
         border-radius: 24px;
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 10px 28px rgba(2, 44, 34, 0.06);
+        box-shadow: 
+            0 8px 32px 0 rgba(15, 118, 110, 0.08),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
     }
     
     .menu-card:hover {
         transform: translateY(-8px);
-        border-color: var(--forest-brand);
-        box-shadow: 0 16px 38px rgba(5, 150, 105, 0.16);
+        border-color: rgba(52, 211, 153, 0.8) !important;
+        box-shadow: 
+            0 16px 38px rgba(5, 150, 105, 0.16),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
     }
     
     .product-img-holder {
         height: 180px;
-        background: linear-gradient(135deg, rgba(240,253,244,0.94), rgba(220,252,231,0.7));
+        background: rgba(255, 255, 255, 0.3) !important;
         border-radius: 18px;
-        border: 1px dashed var(--glass-border);
+        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .feature-icon-wrapper {
@@ -380,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="row align-items-center g-5">
             <div class="col-12 col-md-6">
                 
-                <span class="hero-badge mb-3">SYSTEM PROTOCOL DEPLOYED</span>
+                <span class="hero-badge mb-3">WELCOME TO THARU & PRODUCTS</span>
                 <h1 class="hero-title mt-2 mb-3">Premium Quality Animal Feed</h1>
                 <p class="lead mb-4" style="color: var(--text-muted);">Optimizing agricultural yields with modern automated silo processing and verifiable feed distribution chains.</p>
                 <a href="#menu-catalog" class="btn btn-forest px-4 py-3 shadow">Order Online Now</a>
@@ -432,7 +460,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <h2 class="fw-bold mb-3" style="letter-spacing: -0.5px;">About Us</h2>
                     <div style="width: 60px; height: 3px; background-color: var(--forest-brand); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
                     <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted) !important;">
-                        Welcome to <strong class="text-dark">Tharu Products</strong>. We are dedicated to pioneering the next generation of agricultural excellence by manufacturing and distributing premium, high-nutrition animal feed.
+                        Welcome to <strong class="text-dark">Tharu Products</strong>. <br>
+                        We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms with reliability and excellence.<br>
+
+                        With years of industry experience, we source quality raw materials from trusted suppliers and transform them into carefully formulated animal feed that meets the nutritional needs of livestock. Our focus is on maintaining consistent quality, ensuring timely deliveries, and building long-term partnerships with our customers.
+
+                        Driven by innovation, our business embraces modern technology to streamline operations, improve inventory management, and enhance customer service. <br>Through our web-based platform, we aim to provide a seamless experience where customers can explore our products, place orders, and stay connected with us more efficiently than ever before.
+
+                        <br>Our mission is simple: <strong class="text-dark">to empower the agricultural industry by providing dependable, high-quality animal feed solutions that promote healthier animals and stronger farming communities.</strong>.
                     </p>
                 </div>
             </div>
@@ -510,8 +545,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <div class="col-12 col-sm-6 product-card-wrapper" data-category="<?= strtolower(htmlspecialchars($prod['type'] ?? 'all')) ?>">
                                 <div class="menu-card p-3 d-flex flex-column justify-content-between h-100">
                                     <div>
-                                        <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center text-muted">
-                                            <i class="bi bi-flower2 display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15)); color: var(--forest-brand);"></i>
+                                        <?php
+                                        $imgSrc = 'images/LOGO.png';
+                                        $lowercaseName = strtolower($prod['name']);
+                                        $lowercaseType = strtolower($prod['type'] ?? '');
+                                        $hasImage = false;
+                                        if (strpos($lowercaseName, 'chicken') !== false || strpos($lowercaseType, 'chicken') !== false || strpos($lowercaseType, 'poultry') !== false) {
+                                            $imgSrc = 'images/chickenfeed.jpg';
+                                            $hasImage = true;
+                                        } elseif (strpos($lowercaseName, 'pig') !== false || strpos($lowercaseType, 'pig') !== false) {
+                                            $imgSrc = 'images/pigfeed.jpg';
+                                            $hasImage = true;
+                                        } elseif (strpos($lowercaseName, 'cow') !== false || strpos($lowercaseName, 'cattle') !== false || strpos($lowercaseType, 'cow') !== false || strpos($lowercaseType, 'cattle') !== false || strpos($lowercaseName, 'mash') !== false) {
+                                            $imgSrc = 'images/cowfeed.png';
+                                            $hasImage = true;
+                                        }
+                                        ?>
+                                        <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center overflow-hidden">
+                                            <?php if ($hasImage): ?>
+                                                <img src="<?= $imgSrc ?>" alt="<?= htmlspecialchars($prod['name']) ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;" class="product-card-img">
+                                            <?php else: ?>
+                                                <i class="bi bi-flower2 display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15)); color: var(--forest-brand);"></i>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <h6 class="fw-bold text-dark mb-0"><?= htmlspecialchars($prod['name']) ?></h6>
@@ -647,4 +702,136 @@ function decreaseQty(productId) {
         }
     });
 }
+
+// --- Interactive Particle Background Animation inspired by Google Antigravity ---
+class AntigravityEffect {
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
+        this.canvas.style.width = '100vw';
+        this.canvas.style.height = '100vh';
+        this.canvas.style.pointerEvents = 'none';
+        this.canvas.style.zIndex = '-1'; // Behind content, above body gradient
+        document.body.appendChild(this.canvas);
+        
+        this.particles = [];
+        this.mouse = { x: null, y: null, active: false, radius: 150 };
+        this.colors = [
+            'rgba(16, 185, 129, 0.45)',  // Emerald Green
+            'rgba(52, 211, 153, 0.45)',  // Mint Green
+            'rgba(59, 130, 246, 0.45)',  // Electric Blue
+            'rgba(139, 92, 246, 0.4)',   // Bright Purple
+            'rgba(245, 158, 11, 0.4)',   // Amber Gold
+            'rgba(239, 68, 68, 0.4)'     // Rose Red
+        ];
+        
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        window.addEventListener('mouseout', () => this.handleMouseOut());
+        
+        this.initAmbientParticles(80);
+        this.animate();
+    }
+    
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+    
+    handleMouseMove(e) {
+        this.mouse.x = e.clientX;
+        this.mouse.y = e.clientY;
+        this.mouse.active = true;
+        
+        // Spawn active trail particles
+        if (Math.random() < 0.5) {
+            this.spawnParticle(e.clientX, e.clientY, true);
+        }
+    }
+    
+    handleMouseOut() {
+        this.mouse.active = false;
+        this.mouse.x = null;
+        this.mouse.y = null;
+    }
+    
+    spawnParticle(x, y, isTrail = false) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = isTrail ? Math.random() * 2.5 + 0.5 : Math.random() * 0.6 + 0.2;
+        const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+        this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - (isTrail ? 0.3 : 0.1), // upward drift
+            size: Math.random() * (isTrail ? 3.5 : 2.5) + 1.2,
+            color: color,
+            alpha: 1,
+            decay: isTrail ? 0.015 : 0.006,
+            isTrail: isTrail
+        });
+    }
+    
+    initAmbientParticles(count) {
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * this.canvas.width;
+            const y = Math.random() * this.canvas.height;
+            this.spawnParticle(x, y, false);
+        }
+    }
+    
+    animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Maintain ambient particles
+        if (this.particles.filter(p => !p.isTrail).length < 60) {
+            this.spawnParticle(Math.random() * this.canvas.width, this.canvas.height + 10, false);
+        }
+        
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            
+            // Antigravity cursor interaction (repel)
+            if (this.mouse.active && this.mouse.x !== null) {
+                const dx = p.x - this.mouse.x;
+                const dy = p.y - this.mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.mouse.radius) {
+                    const force = (this.mouse.radius - dist) / this.mouse.radius;
+                    p.vx += (dx / dist) * force * 0.5;
+                    p.vy += (dy / dist) * force * 0.5;
+                }
+            }
+            
+            p.x += p.vx;
+            p.y += p.vy;
+            
+            p.vx *= 0.97;
+            p.vy *= 0.97;
+            
+            p.alpha -= p.decay;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = p.alpha;
+            this.ctx.fillStyle = p.color;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+            
+            if (p.alpha <= 0 || p.x < -10 || p.x > this.canvas.width + 10 || p.y < -10 || p.y > this.canvas.height + 10) {
+                this.particles.splice(i, 1);
+            }
+        }
+        
+        requestAnimationFrame(() => this.animate());
+    }
+}
+window.addEventListener('DOMContentLoaded', () => {
+    new AntigravityEffect();
+});
 </script>

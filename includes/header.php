@@ -22,38 +22,34 @@ if (session_status() === PHP_SESSION_NONE) {
     .bg-forest { background-color: var(--dark-forest) !important; }
     .text-emerald { color: var(--emerald) !important; }
     
-    /* NORMAL STATE: Your clean, solid forest green button */
+    /* NORMAL STATE: Bright cool green glassmorphism button */
     .btn-forest {
-        background-color: var(--dark-forest);
-        color: #ffffff;
-        border: 1px solid transparent;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Ultra smooth transition */
+        background: rgba(52, 211, 153, 0.25) !important;
+        backdrop-filter: blur(12px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+        border: 2px solid rgba(52, 211, 153, 0.6) !important;
+        color: #064e3b !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.15) !important;
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4) !important;
     }
     
-    /* HOVER STATE: Transitioning to Emerald */
+    /* HOVER STATE: Glowing bright green */
     .btn-forest:hover {
-        background-color: var(--emerald);
-        color: #ffffff;
+        background: rgba(52, 211, 153, 0.45) !important;
+        border-color: rgba(52, 211, 153, 0.9) !important;
+        color: #022c22 !important;
+        box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.25) !important;
+        transform: translateY(-2px) !important;
     }
 
-    /* CLICKED (ACTIVE) STATE: Transforms instantly into glassmorphism */
+    /* CLICKED (ACTIVE) STATE: Deeper press feedback */
     .btn-forest:active {
-        /* Semi-transparent background matching your dark forest green */
-        background-color: rgba(6, 78, 59, 0.4) !important; 
-        color: var(--dark-forest) !important; /* Dark text so it's readable over the glass */
-        
-        /* The Glassmorphism Recipe */
-        backdrop-filter: blur(8px) saturate(120%);
-        -webkit-backdrop-filter: blur(8px) saturate(120%);
-        
-        /* Highlighted glass borders */
-        border: 1px solid rgba(255, 255, 255, 0.45) !important;
-        
-        /* Soft, spread-out shadow */
-        box-shadow: 0 8px 32px 0 rgba(6, 78, 59, 0.15) !important;
-        
-        /* Slightly scale down for physical click feedback */
-        transform: scale(0.96); 
+        background: rgba(52, 211, 153, 0.6) !important;
+        transform: scale(0.96) translateY(-1px) !important;
+        box-shadow: 0 4px 16px 0 rgba(16, 185, 129, 0.2) !important;
     }
 </style>
 </head>
