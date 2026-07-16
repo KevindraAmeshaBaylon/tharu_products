@@ -183,7 +183,7 @@ Developed following the **Agile methodology**, with testing woven throughout eac
 ## 👥 Team
 
 **Group 05 — DSE25.2F, School of Computing and Engineering**
-Supervised by **Ms. Chandula Rajapaksa**
+Supervised by **Ms. Amaya Lokuliyana**
 
 | Student ID | Name |
 |---|---|
