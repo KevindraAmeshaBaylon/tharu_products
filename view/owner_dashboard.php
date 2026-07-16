@@ -242,6 +242,38 @@ if ($monthly_expense_query) {
     }
 }
 
+// --- Real chart datasets sourced from the database tables ---
+// Sales sparkline: last 7 orders (real amounts)
+$sales_chart_values = array_reverse(array_slice(array_column($monthly_sales_rows, 'totamt'), -7));
+$sales_chart_labels = array_reverse(array_slice(array_map(function($r){ return '#ORD-' . $r['orderID']; }, $monthly_sales_rows), -7));
+if (empty($sales_chart_values)) { $sales_chart_values = [0]; $sales_chart_labels = ['No Sales']; }
+
+// Expense breakdown by type (real amounts)
+$expense_types = [];
+foreach ($monthly_expense_rows as $exp) {
+    $type = $exp['type'] ?? 'Other';
+    $expense_types[$type] = ($expense_types[$type] ?? 0) + floatval($exp['amount']);
+}
+$expense_chart_labels = array_keys($expense_types);
+$expense_chart_values = array_values($expense_types);
+if (empty($expense_chart_values)) { $expense_chart_values = [0]; $expense_chart_labels = ['No Expenses']; }
+
+// Wave chart: monthly sales vs expenses for the last 6 months (real data)
+$wave_labels = [];
+$wave_sales = [];
+$wave_expenses = [];
+for ($i = 5; $i >= 0; $i--) {
+    $d = date('Y-m-01', strtotime("-$i months"));
+    $wave_labels[] = date('M', strtotime($d));
+    $sm = $conn->query("SELECT COALESCE(SUM(totamt),0) s FROM order_tbl WHERE DATE_FORMAT(date,'%Y-%m') = DATE_FORMAT('$d','%Y-%m')");
+    $wave_sales[] = floatval($sm && $sm->num_rows ? ($sm->fetch_assoc()['s'] ?? 0) : 0);
+    $em = $conn->query("SELECT COALESCE(SUM(amount),0) e FROM expense_tbl WHERE DATE_FORMAT(date,'%Y-%m') = DATE_FORMAT('$d','%Y-%m')");
+    $wave_expenses[] = floatval($em && $em->num_rows ? ($em->fetch_assoc()['e'] ?? 0) : 0);
+}
+$wave_sales[] = $total_sales;
+$wave_expenses[] = $total_expenses;
+$wave_labels[] = 'Now';
+
 // Fetch staff members and salary-related data using the actual schema
 $staff_members = [];
 $staff_query = $conn->query("SELECT u.userID as id, u.username, u.role, COALESCE(a.accountantID, 0) as accountantID, COALESCE(a.base_salary, 0) as base_salary, COALESCE(a.OT_rate, 0) as ot_rate, COALESCE(s.stocksupID, 0) as stocksupID, COALESCE(l.salessupID, 0) as salessupID FROM user_tbl u LEFT JOIN accountant_tbl a ON a.userID = u.userID LEFT JOIN stocksuperviser_tbl s ON s.userID = u.userID LEFT JOIN salessuperviser_tbl l ON l.userID = u.userID WHERE u.username != 'r.tharu' ORDER BY u.userID");
@@ -311,6 +343,10 @@ if ($generatedReportsQuery) {
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Shared typography (matches Customer Dashboard) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <!-- Chart.js Engine CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -319,16 +355,24 @@ if ($generatedReportsQuery) {
     
     <style>
         :root {
-            --sidebar-bg: #0b1a10;
-            --sidebar-active: #1e3a24;
+            --sidebar-bg: rgba(11, 26, 16, 0.92);
+            --sidebar-active: rgba(46, 125, 50, 0.35);
             --forest-main: #2e7d32;
             --mint-light: #e8f5e9;
             --canvas-bg: #f8faf9;
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --deep-forest: #052e2b;
+            --mint-highlight: #6ee7b7;
         }
 
         body {
             background-color: var(--canvas-bg);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.07) 0%, transparent 42%),
+                radial-gradient(circle at 90% 80%, rgba(46, 125, 50, 0.05) 0%, transparent 48%),
+                linear-gradient(135deg, #f7fff9 0%, #edf5f1 40%, #e2f0e8 100%);
+            background-attachment: fixed;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
             margin: 0;
         }
@@ -340,7 +384,9 @@ if ($generatedReportsQuery) {
 
         .sidebar-panel {
             width: 260px;
-            background-color: var(--sidebar-bg);
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
             color: #ffffff;
             padding: 2rem 1rem;
             flex-shrink: 0;
@@ -352,6 +398,8 @@ if ($generatedReportsQuery) {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 6px 0 30px rgba(2, 44, 34, 0.08);
         }
 
         .main-content {
@@ -359,6 +407,8 @@ if ($generatedReportsQuery) {
             margin-left: 260px;
             padding: 2.5rem;
             width: calc(100% - 260px);
+            position: relative;
+            z-index: 1;
         }
 
         .nav-dash-link {
@@ -368,16 +418,37 @@ if ($generatedReportsQuery) {
             color: #a3b899;
             text-decoration: none;
             padding: 0.85rem 1rem;
-            border-radius: 12px;
+            border-radius: 14px;
             margin-bottom: 0.5rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             cursor: pointer;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
         }
-        .nav-dash-link:hover, .nav-dash-link.active {
+        .nav-dash-link:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+            color: #ffffff;
+            transform: translateX(4px);
+        }
+        .nav-dash-link.active {
             background-color: var(--sidebar-active);
             color: #ffffff;
+            border-color: rgba(52, 211, 153, 0.35);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255,255,255,0.12);
         }
+        .nav-dash-link.active::before {
+            content: "";
+            position: absolute;
+            left: 0; top: 18%;
+            height: 64%; width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: var(--mint-highlight);
+            box-shadow: 0 0 12px rgba(110, 231, 183, 0.8);
+        }
+        .nav-dash-link i { font-size: 1.1rem; }
 
         .brand-logo-img {
             height: 36px;
@@ -387,24 +458,43 @@ if ($generatedReportsQuery) {
 
         .sidebar-profile-footer {
             padding: 1rem;
-            background: rgba(255, 255, 255, 0.04);
-            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
             margin-top: auto;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(6px);
         }
 
+        /* GLASSMORPHISM CARDS (matching homepage / customer dashboard) */
         .stat-card-dark {
-            background-color: #122919;
+            background: linear-gradient(135deg, rgba(11, 26, 16, 0.92), rgba(5, 46, 43, 0.85)) !important;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             color: #ffffff;
-            border-radius: 20px;
+            border-radius: 22px;
             padding: 1.5rem;
-            border: none;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 14px 34px rgba(2, 44, 34, 0.18);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        .stat-card-dark:hover {
+            transform: translateY(-6px);
+            border-color: rgba(110, 231, 183, 0.5);
+            box-shadow: 0 20px 44px rgba(2, 44, 34, 0.24);
+        }
+
         .stat-card-light {
-            background: #ffffff;
-            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(240, 253, 244, 0.55)) !important;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 22px;
             padding: 1.5rem;
-            border: 1px solid #eef2f0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 14px 34px rgba(2, 44, 34, 0.06), inset 0 1px 0 rgba(255,255,255,0.85);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .stat-card-light:hover {
+            transform: translateY(-6px);
+            border-color: rgba(52, 211, 153, 0.7);
+            box-shadow: 0 20px 40px rgba(2, 44, 34, 0.1), inset 0 1px 0 rgba(255,255,255,0.9);
         }
 
         .metric-value {
@@ -413,20 +503,45 @@ if ($generatedReportsQuery) {
             letter-spacing: -0.5px;
         }
 
+        .card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(240, 253, 244, 0.55)) !important;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 16px 40px rgba(2, 44, 34, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+            transition: all 0.3s ease;
+        }
+        .card:hover { transform: translateY(-3px); }
+
+        .mini-chart-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(236, 253, 245, 0.6)) !important;
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 12px 30px rgba(2, 44, 34, 0.06);
+        }
+
+        .tab-pane.fade { transition: opacity 0.35s ease, transform 0.35s ease; }
+        .tab-pane.fade:not(.show) { transform: translateY(8px); }
+
         .custom-table th {
-            background-color: #f1f5f3;
-            color: #475569;
+            background-color: rgba(46, 125, 50, 0.08) !important;
+            color: #1e3a24;
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 700;
             padding: 1rem;
+            border-bottom: 2px solid rgba(46, 125, 50, 0.14) !important;
         }
         .custom-table td {
             padding: 1rem;
             vertical-align: middle;
             font-size: 0.92rem;
+            color: #2c3e35;
         }
+        .custom-table tbody tr { transition: background 0.2s ease; }
+        .custom-table tbody tr:hover { background: rgba(46, 125, 50, 0.04); }
     </style>
 </head>
 <body>
@@ -474,32 +589,60 @@ if ($generatedReportsQuery) {
                 </div>
 
                 <div class="row g-4 mb-4">
-                    <div class="col-12 col-md-3">
-                        <div class="stat-card-dark shadow-sm">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="stat-card-dark shadow-sm h-100">
                             <span class="text-white-50 small text-uppercase">Total Sales</span>
                             <div class="metric-value mt-1">LKR <?= number_format($total_sales, 2) ?></div>
                             <span class="text-success small fw-bold">▲ Live</span> <span class="text-white-50 small">database metric</span>
                         </div>
                     </div>
-                    <div class="col-12 col-md-3">
-                        <div class="stat-card-light shadow-sm">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="stat-card-light shadow-sm h-100">
                             <span class="text-muted small text-uppercase">Net Profit Margin</span>
                             <div class="metric-value mt-1 text-dark"><?= $profit_margin ?>%</div>
                             <span class="text-success small fw-bold">Calculated</span> <span class="text-muted small">rate</span>
                         </div>
                     </div>
-                    <div class="col-12 col-md-3">
-                        <div class="stat-card-light shadow-sm">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="stat-card-light shadow-sm h-100">
                             <span class="text-muted small text-uppercase">Operating Overhead</span>
                             <div class="metric-value mt-1 text-dark">LKR <?= number_format($total_expenses, 2) ?></div>
                             <span class="text-danger small fw-bold">▼ Tracked</span> <span class="text-muted small">payouts</span>
                         </div>
                     </div>
-                    <div class="col-12 col-md-3">
-                        <div class="stat-card-light shadow-sm">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="stat-card-light shadow-sm h-100">
                             <span class="text-muted small text-uppercase">Net Return Asset</span>
                             <div class="metric-value mt-1 text-success">LKR <?= number_format($net_profit, 2) ?></div>
                             <span class="text-success small fw-bold">✓ Net Flow</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Equal-size analytics charts row (same level & size) -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="mini-chart-card p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-graph-up-arrow me-1 text-success"></i>Total Sales</h6>
+                            <div class="flex-grow-1" style="height: 180px;"><canvas id="chartTotalSales"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="mini-chart-card p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-pie-chart-fill me-1 text-success"></i>Net Profit Margin</h6>
+                            <div class="flex-grow-1" style="height: 180px;"><canvas id="chartProfitMargin"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="mini-chart-card p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-bar-chart-fill me-1 text-success"></i>Operating Overhead</h6>
+                            <div class="flex-grow-1" style="height: 180px;"><canvas id="chartOperatingOverhead"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="mini-chart-card p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-bullseye me-1 text-success"></i>Net Return Asset</h6>
+                            <div class="flex-grow-1" style="height: 180px;"><canvas id="chartNetReturnAsset"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -632,11 +775,12 @@ if ($generatedReportsQuery) {
 
                             <div class="col-md-6">
                                 <label class="form-label small text-muted">OT Hours Worked</label>
-                                <input type="number" id="otHours" class="form-control" value="0" step="0.01" oninput="calculateTotalSalary()">
+                                <input type="number" id="otHours" class="form-control" value="0" step="0.01" oninput="calculateTotalSalary()" readonly>
                             </div>
+                            
                             <div class="col-md-6">
-                                <label class="form-label small text-muted">OT Rate Per Hour (LKR)</label>
-                                <input type="number" id="otRateDisplay" class="form-control" value="0" step="0.01" oninput="calculateTotalSalary()">
+                                <label class="form-label small text-muted">OT Rate Per Hour</label>
+                                <input type="number" id="otRateDisplay" class="form-control" value="0" step="0.01" oninput="calculateTotalSalary()" readonly>
                             </div>
 
                             <input type="hidden" id="otRateHidden" name="ot_rate" value="0">
@@ -1179,11 +1323,11 @@ document.addEventListener("DOMContentLoaded", function () {
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['1', '5', '10', '15', '20', '25', '30'],
+                labels: <?= json_encode($wave_labels) ?>,
                 datasets: [
                     {
                         label: 'Sales Revenue Track',
-                        data: [180000, 150000, 240000, 290000, 210000, 260000, <?= $total_sales ?>],
+                        data: <?= json_encode($wave_sales) ?>,
                         borderColor: '#2e7d32',
                         backgroundColor: gradientSales,
                         fill: true,
@@ -1194,7 +1338,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     },
                     {
                         label: 'Operational Expense Track',
-                        data: [140000, 110000, 160000, 150000, 130000, 170000, <?= $total_expenses ?>],
+                        data: <?= json_encode($wave_expenses) ?>,
                         borderColor: '#e74c3c',
                         backgroundColor: gradientExpenses,
                         fill: true,
@@ -1217,6 +1361,104 @@ document.addEventListener("DOMContentLoaded", function () {
                         ticks: { callback: value => 'LKR ' + value.toLocaleString() }
                     }
                 }
+            }
+        });
+    }
+
+    // 1. Total Sales Mini Bar Chart
+    const tsCtx = document.getElementById('chartTotalSales');
+    if (tsCtx) {
+        new Chart(tsCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: <?= json_encode($sales_chart_labels) ?>,
+                datasets: [{
+                    data: <?= json_encode($sales_chart_values) ?>,
+                    backgroundColor: 'rgba(52, 211, 153, 0.75)',
+                    borderColor: 'rgba(52, 211, 153, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    }
+
+    // 2. Net Profit Margin Mini Doughnut Chart
+    const pmCtx = document.getElementById('chartProfitMargin');
+    if (pmCtx) {
+        new Chart(pmCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Profit %', 'Cost %'],
+                datasets: [{
+                    data: [<?= max(0, $profit_margin) ?>, <?= max(0, 100 - $profit_margin) ?>],
+                    backgroundColor: ['#2e7d32', 'rgba(231, 76, 60, 0.25)'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: { legend: { display: false }, tooltip: { enabled: true } }
+            }
+        });
+    }
+
+    // 3. Operating Overhead Mini Bar Chart
+    const ohCtx = document.getElementById('chartOperatingOverhead');
+    if (ohCtx) {
+        new Chart(ohCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: <?= json_encode($expense_chart_labels) ?>,
+                datasets: [{
+                    data: <?= json_encode($expense_chart_values) ?>,
+                    backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                    borderColor: 'rgba(231, 76, 60, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    }
+
+    // 4. Net Return Asset Mini Doughnut Chart
+    const raCtx = document.getElementById('chartNetReturnAsset');
+    if (raCtx) {
+        new Chart(raCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Net Return', 'Overhead'],
+                datasets: [{
+                    data: [<?= max(0, $net_profit) ?>, <?= max(0, $total_expenses) ?>],
+                    backgroundColor: ['#4caf50', '#ff9800'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: { legend: { display: false }, tooltip: { enabled: true } }
             }
         });
     }
