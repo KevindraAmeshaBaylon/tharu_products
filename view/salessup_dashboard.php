@@ -1,10 +1,10 @@
 <?php
 // salessup/dashboard.php
 session_start();
-require_once dirname(__DIR__) . '/config/database.example.php';
+require_once dirname(__DIR__) . '/model/config/database.php';
 
 // Strict Session Guard Check
-if (!isset($_SESSION['user_id']) || $_SESSION['username'] !== 'salessup01') {
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'salessup') {
     header("Location: ../auth/login.php");
     exit;
 }
@@ -150,5 +150,3 @@ $salesResult = $conn->query($salesQuery);
         </div>
     </div>
 </div>
-
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>

@@ -3,7 +3,7 @@
 session_start();
 
 // 1. Basic Session Guard
-if (!isset($_SESSION['user_id']) || $_SESSION['username'] !== 'owner01') {
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'owner') {
     header("Location: ../auth/login.php");
     exit;
 }
@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['username'] !== 'owner01') {
 // 2. Database Connection Wrapper
 // Adjust your path to wherever your database config sits (e.g., config.php or db.php)
 // Make sure your config file defines a working $conn PDO or mysqli instance.
-require_once __DIR__ . '/../config/database.example.php'; 
+require_once __DIR__ . '/../model/config/database.php'; 
 
 $conn=getDBConnection(); // Assuming getDBConnection() returns a PDO or mysqli connection
 

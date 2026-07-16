@@ -13,28 +13,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $password = trim($_POST['password']);
 
     if (!empty($username) && !empty($password)) {
-        $stmt = $conn->prepare("SELECT userID, username, password, email FROM user_tbl WHERE username = ? LIMIT 1");
-        $stmt->bind_param("s", $username);
+        // Fetch role along with user details
+        $stmt = $conn->prepare("SELECT userID, username, password, email, role FROM user_tbl WHERE username = ? OR email = ? LIMIT 1");
+        $stmt->bind_param("ss", $username, $username);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result && $result->num_rows === 1) {
             $user = $result->fetch_assoc();
-            
-            if (password_verify($password, $user['password'])) {
+            $storedPassword = (string)($user['password'] ?? '');
+
+            $passwordMatches = ($password === $storedPassword) || password_verify($password, $storedPassword);
+            if ($passwordMatches) {
                 $_SESSION['user_id'] = $user['userID'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['email'] = $user['email'];
-                header("Location: ../index.php");
+                $_SESSION['role'] = $user['role'];
+
+                $role = strtolower(trim((string)($user['role'] ?? 'cust')));
+                $dashboardFile = 'cust_dashboard.php';
+
+                switch ($role) {
+                    case 'owner':
+                        $dashboardFile = 'owner_dashboard.php';
+                        break;
+                    case 'stocksup':
+                        $dashboardFile = 'stocksup_dashboard.php';
+                        break;
+                    case 'accountant':
+                        $dashboardFile = 'acc_dashboard.php';
+                        break;
+                    case 'salessup':
+                        $dashboardFile = 'salessup_dashboard.php';
+                        break;
+                    case 'worker':
+                        $dashboardFile = 'worker_dashboard.php';
+                        break;
+                    case 'driver':
+                        $dashboardFile = 'driver_dashboard.php';
+                        break;
+                    case 'cust':
+                    default:
+                        $dashboardFile = 'cust_dashboard.php';
+                        break;
+                }
+
+                $redirectUrl = '../view/' . $dashboardFile;
+                header('Location: ' . $redirectUrl);
                 exit;
             } else {
-                $error_message = "Invalid system credentials configuration provided.";
+                $error_message = 'Invalid password for the supplied username/email.';
             }
         } else {
-            $error_message = "Username profile does not exist within the system registry.";
+            $error_message = "Username '" . htmlspecialchars($username) . "' not found in user_tbl.";
         }
     } else {
-        $error_message = "Please populate all necessary entry blocks.";
+        $error_message = 'Please fill in all details.';
     }
 }
 
@@ -54,10 +88,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $error_message = "Username or Registration Email addresses already configured.";
         } else {
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-            $defaultCatalogID = 1; 
-
-            $insertStmt = $conn->prepare("INSERT INTO user_tbl (username, password, email) VALUES (?, ?, ?, ?)");
-            $insertStmt->bind_param("sssi", $username, $hashedPassword, $email, $defaultCatalogID);
+            $defaultRole = 'cust';
+            $insertStmt = $conn->prepare("INSERT INTO user_tbl (username, password, email, role) VALUES (?, ?, ?, ?)");
+            $insertStmt->bind_param("ssss", $username, $hashedPassword, $email, $defaultRole);
             
             if ($insertStmt->execute()) {
                 $success_message = "Registration profile deployed! You can now authenticate via Sign In panel.";
@@ -92,7 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         padding: 20px;
     }
 
-    /* Master Interface Frame */
     #mainWrapper {
         width: 100%;
         max-width: 900px;
@@ -105,7 +137,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
     }
 
-    /* White Form Block */
     .form-panel-side {
         position: absolute;
         top: 0;
@@ -136,7 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         border-radius: 0 40px 40px 0;
     }
 
-    /* Premium Blurred Frosted Glass Section */
     .slider-container-overlay {
         position: absolute;
         top: 0;
@@ -200,7 +230,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         margin-bottom: 5px;
     }
 
-    /* Clean Mockup Input Blocks */
     .input-group-custom {
         position: relative;
         width: 100%;
@@ -232,7 +261,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         z-index: 10;
     }
 
-    /* Vibrant Green Button Gradient */
     .btn-forest {
         background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
         color: #ffffff;
@@ -295,10 +323,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         <!-- SIGN UP VIEW -->
         <div class="form-panel-side signup-panel-view">
-            <form action="login.php" method="POST">
+            <form action="" method="POST">
                 <input type="hidden" name="action" value="signup">
                 <h2>Join Us</h2>
-                <p class="mb-4 text-muted small">Register your new system buyer access node.</p>
+                <p class="mb-4 text-muted small">Register your new system access profile.</p>
                 
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control form-control-glass" placeholder="Username" required autocomplete="off">
@@ -320,10 +348,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         <!-- SIGN IN VIEW -->
         <div class="form-panel-side signin-panel-view">
-            <form action="login.php" method="POST">
+            <form action="" method="POST">
                 <input type="hidden" name="action" value="signin">
                 <h2>Welcome</h2>
-                <p class="mb-4 text-muted small">Access your localized ordering matrix.</p>
+                <p class="mb-4 text-muted small">Access your localized dashboard matrix.</p>
                 
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control form-control-glass" placeholder="Username / Email" required autocomplete="off">
@@ -345,13 +373,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 
                 <div class="slider-content-block slider-block-left">
                     <h3 class="fw-bold mb-2">Back to the Herd?</h3>
-                    <p class="small mb-4" style="max-width: 280px; font-weight: 500;">Access your saved product profiles and checkout manifests directly inside.</p>
+                    <p class="small mb-4" style="max-width: 280px; font-weight: 500;">Access your system features and metrics safely inside.</p>
                     <button type="button" class="btn-outline-glass-action" id="toSignIn">Sign In</button>
                 </div>
                 
                 <div class="slider-content-block slider-block-right">
                     <h3 class="fw-bold mb-2">New to the Farm?</h3>
-                    <p class="small mb-4" style="max-width: 280px; font-weight: 500;">Set up your company profile directly inside.</p>
+                    <p class="small mb-4" style="max-width: 280px; font-weight: 500;">Set up your customized business account profile here.</p>
                     <button type="button" class="btn-outline-glass-action" id="toSignUp">Sign Up</button>
                 </div>
                 
@@ -361,7 +389,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 </div>
 
-<!-- Perfected Combined Script Handler -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const wrapper = document.getElementById('mainWrapper');
@@ -370,31 +397,18 @@ document.addEventListener("DOMContentLoaded", function() {
     const linkToSignUp = document.getElementById('linkToSignUp');
     const linkToSignIn = document.getElementById('linkToSignIn');
 
-    function showSignUp() {
-        if (wrapper) wrapper.classList.add("right-panel-active");
-    }
-
-    function showSignIn() {
-        if (wrapper) wrapper.classList.remove("right-panel-active");
-    }
+    function showSignUp() { if (wrapper) wrapper.classList.add("right-panel-active"); }
+    function showSignIn() { if (wrapper) wrapper.classList.remove("right-panel-active"); }
 
     if (toSignUpBtn) toSignUpBtn.addEventListener('click', showSignUp);
     if (toSignInBtn) toSignInBtn.addEventListener('click', showSignIn);
     if (linkToSignUp) linkToSignUp.addEventListener('click', showSignUp);
     if (linkToSignIn) linkToSignIn.addEventListener('click', showSignIn);
-
-    // Context check for automated checkout flips
-    const urlCheck = new URLSearchParams(window.location.search);
-    if (urlCheck.get('action') === 'signup') {
-        showSignUp();
-    }
 });
 
-// Interactive Eye Icon Action Routine
 function toggleVisibility(inputId, eyeId) {
     const passwordInput = document.getElementById(inputId);
     const toggleIcon = document.getElementById(eyeId);
-    
     if (passwordInput && toggleIcon) {
         if (passwordInput.type === "password") {
             passwordInput.type = "text";

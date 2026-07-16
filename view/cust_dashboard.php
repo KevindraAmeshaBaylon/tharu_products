@@ -3,8 +3,8 @@
 session_start();
 require_once __DIR__ . '/../model/config/database.php';
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'cust') {
+    header("Location: ../auth/login.php");
     exit;
 }
 

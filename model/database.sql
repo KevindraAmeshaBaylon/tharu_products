@@ -473,6 +473,10 @@ INSERT INTO RawMaterial_Batch_tbl (batchID, materialID) VALUES
 INSERT INTO Order_Batch_tbl (batchID, orderID) VALUES
 (1, 1), (2, 2);
 
+
+--added role column to user_tbl and set roles for existing users
+ALTER TABLE user_tbl ADD role VARCHAR(20) NOT NULL ;
+UPDATE `user_tbl` SET `role` = 'owner' WHERE `user_tbl`.`userID` = 1; UPDATE `user_tbl` SET `role` = 'stocksup' WHERE `user_tbl`.`userID` = 2; UPDATE `user_tbl` SET `role` = 'accountant' WHERE `user_tbl`.`userID` = 3; UPDATE `user_tbl` SET `role` = 'salessup' WHERE `user_tbl`.`userID` = 4; UPDATE `user_tbl` SET `role` = 'worker' WHERE `user_tbl`.`userID` = 5; UPDATE `user_tbl` SET `role` = 'worker' WHERE `user_tbl`.`userID` = 6; UPDATE `user_tbl` SET `role` = 'driver' WHERE `user_tbl`.`userID` = 7; UPDATE `user_tbl` SET `role` = 'driver' WHERE `user_tbl`.`userID` = 8; UPDATE `user_tbl` SET `role` = 'cust' WHERE `user_tbl`.`userID` = 9; UPDATE `user_tbl` SET `role` = 'cust' WHERE `user_tbl`.`userID` = 10; UPDATE `user_tbl` SET `role` = 'cust' WHERE `user_tbl`.`userID` = 11;
 -- ============================================================================
 -- END OF SCRIPT
 -- ============================================================================
