@@ -49,16 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
 <style>
     :root {
-        --forest-brand: #059669; /* Richer green for better contrast on light bg */
-        --deep-forest: #022c22;  /* Used for dark elements like header and footer */
-        --mint-highlight: #10b981;
-        --glass-panel-bg: rgba(255, 255, 255, 0.75); /* Clean frosted white glass */
-        --glass-border: rgba(5, 150, 105, 0.18);
-        --text-dark: #0f172a;    /* High contrast near-black for body text */
-        --text-muted: #475569;   /* Readable gray for descriptions */
+        --forest-brand: #0f766e;
+        --deep-forest: #052e2b;
+        --mint-highlight: #6ee7b7;
+        --glass-panel-bg: rgba(255, 255, 255, 0.62);
+        --glass-border: rgba(15, 118, 110, 0.22);
+        --text-dark: #0f172a;
+        --text-muted: #475569;
         --font-primary: 'Plus Jakarta Sans', sans-serif;
         --font-mono: 'Space Grotesk', sans-serif;
     }
@@ -68,12 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     body {
-        /* Premium, bright, clean light-mint gradient background */
-        background-color: #f4fbf7;
-        background-image: 
-            radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
-            radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 50%),
-            linear-gradient(180deg, #f4fbf7 0%, #eaf5f0 100%);
+        background-color: #f5fef9;
+        background-image:
+            radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 42%),
+            radial-gradient(circle at 90% 80%, rgba(6, 95, 70, 0.06) 0%, transparent 48%),
+            linear-gradient(135deg, #f7fff9 0%, #edf9f2 38%, #e2f7ed 100%);
         background-attachment: fixed;
         color: var(--text-dark);
         font-family: var(--font-primary);
@@ -109,7 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         opacity: 1;
     }
 
-    /* Ensures high visibility inside the dark green header */
+    .scroll-navbar .navbar-collapse {
+        justify-content: flex-end;
+    }
+
     .scroll-navbar .navbar-brand span {
         color: #ffffff !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -127,14 +130,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     /* 2. FROSTED GLASS PANELS ON LIGHT BG */
     .glass-panel {
-        background: var(--glass-panel-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(240,253,244,0.62));
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
         border: 1px solid var(--glass-border);
         border-radius: 24px;
-        box-shadow: 
-            0 10px 30px rgba(2, 44, 34, 0.04),
-            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        box-shadow:
+            0 16px 36px rgba(2, 44, 34, 0.08),
+            inset 0 1px 0 rgba(255,255,255,0.75);
         transition: all 0.3s ease;
     }
     
@@ -151,12 +154,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     .hero-container {
         padding: 9rem 0 6rem 0;
         background: transparent;
+        position: relative;
+        overflow: hidden;
+        border-bottom-left-radius: 32px;
+        border-bottom-right-radius: 32px;
+    }
+
+    .hero-container .container {
+        position: relative;
+        z-index: 1;
     }
     
     .hero-badge {
         font-family: var(--font-mono);
         letter-spacing: 2px;
-        background: rgba(5, 150, 105, 0.1);
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(110, 231, 183, 0.2));
         color: var(--forest-brand);
         border: 1px solid rgba(5, 150, 105, 0.2);
         padding: 8px 16px;
@@ -164,6 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         font-size: 0.75rem;
         display: inline-block;
         font-weight: 700;
+        backdrop-filter: blur(10px);
     }
     
     .hero-title {
@@ -172,64 +185,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         line-height: 1.15;
         letter-spacing: -2px;
         color: var(--deep-forest);
+        text-shadow: 0 2px 12px rgba(2, 44, 34, 0.08);
+    }
+
+    .hero-container .lead {
+        color: var(--text-muted) !important;
+    }
+
+    .glass-btn {
+        border: 1px solid rgba(5, 150, 105, 0.2);
+        background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(236,253,245,0.7));
+        color: var(--forest-brand);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 12px 24px rgba(2, 44, 34, 0.10);
+        border-radius: 999px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    }
+
+    .glass-btn:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(220,252,231,0.9));
+        color: var(--deep-forest);
+        transform: translateY(-1px);
+        box-shadow: 0 16px 30px rgba(2, 44, 34, 0.14);
+    }
+
+    .footer-contact-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    @media (max-width: 767.98px) {
+        .footer-contact-col {
+            align-items: center;
+            text-align: center;
+        }
     }
 
     /* DYNAMIC INTERACTION BUTTONS */
     .btn-forest {
-        background: var(--forest-brand);
+        background: linear-gradient(135deg, var(--forest-brand), var(--mint-highlight));
         color: #ffffff !important;
         font-weight: 700;
         border-radius: 12px;
         padding: 10px 24px;
         border: none;
         transition: all 0.2s ease;
-        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.2);
+        box-shadow: 0 8px 24px rgba(15, 118, 110, 0.22);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
     
     .btn-forest:hover {
-        background: var(--deep-forest);
-        box-shadow: 0 8px 25px rgba(2, 44, 34, 0.3);
+        background: linear-gradient(135deg, var(--deep-forest), var(--forest-brand));
+        box-shadow: 0 12px 28px rgba(5, 46, 43, 0.24);
         transform: translateY(-2px);
     }
 
     /* FILTER PILLS */
     .category-pill {
-        border: 1px solid var(--glass-border);
-        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(5, 150, 105, 0.18);
+        background: linear-gradient(135deg, rgba(255,255,255,0.76), rgba(236,253,245,0.7));
         color: var(--text-muted);
-        padding: 0.5rem 1.25rem;
+        padding: 0.55rem 1.2rem;
         border-radius: 50px;
         font-size: 0.85rem;
         cursor: pointer;
         transition: all 0.2s ease;
         font-family: var(--font-mono);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 18px rgba(2, 44, 34, 0.06);
     }
     
     .category-pill.active, .category-pill:hover {
-        background: var(--forest-brand);
+        background: linear-gradient(135deg, rgba(6, 95, 70, 0.95), rgba(16, 185, 129, 0.9));
         color: #ffffff;
-        border-color: var(--forest-brand);
+        border-color: rgba(16, 185, 129, 0.6);
         font-weight: bold;
+        box-shadow: 0 10px 24px rgba(6, 95, 70, 0.22);
     }
 
     /* PRODUCT CATALOG CARDS */
     .menu-card {
-        background: var(--glass-panel-bg);
+        background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(229,248,238,0.7));
         border: 1px solid var(--glass-border);
         border-radius: 24px;
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 8px 25px rgba(2, 44, 34, 0.03);
+        box-shadow: 0 10px 28px rgba(2, 44, 34, 0.06);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
     }
     
     .menu-card:hover {
         transform: translateY(-8px);
         border-color: var(--forest-brand);
-        box-shadow: 0 15px 35px rgba(5, 150, 105, 0.12);
+        box-shadow: 0 16px 38px rgba(5, 150, 105, 0.16);
     }
     
     .product-img-holder {
         height: 180px;
-        background: rgba(234, 245, 240, 0.6);
+        background: linear-gradient(135deg, rgba(240,253,244,0.94), rgba(220,252,231,0.7));
         border-radius: 18px;
         border: 1px dashed var(--glass-border);
     }
@@ -240,11 +297,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(5, 150, 105, 0.08);
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(110, 231, 183, 0.16));
         border: 1px solid var(--glass-border);
         border-radius: 18px;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         margin: 0 auto 1.25rem auto;
+        color: var(--forest-brand);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    .icon-glass-btn {
+        width: 2.1rem;
+        height: 2.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(5, 150, 105, 0.16);
+        background: linear-gradient(135deg, rgba(255,255,255,0.86), rgba(236,253,245,0.82));
+        color: var(--forest-brand);
+        box-shadow: 0 8px 20px rgba(2, 44, 34, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .icon-glass-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(2, 44, 34, 0.12);
     }
 
     .sticky-cart-card {
@@ -283,13 +361,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navContent">
-            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-3">
+        <div class="collapse navbar-collapse justify-content-end" id="navContent">
+            <ul class="navbar-nav mb-2 mb-lg-0 gap-3 align-items-center me-3">
                 <li class="nav-item"><a class="nav-link" href="#menu-catalog">Menu</a></li>
                 <li class="nav-item"><a class="nav-link" href="#about-section">About Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="#contact-section">Contact Us</a></li>
             </ul>
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center">
                 <a href="auth/login.php" class="btn btn-sm btn-forest px-3">Sign In</a>
             </div>
         </div>
@@ -324,21 +402,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="row g-4 mt-2">
             <div class="col-12 col-md-4">
                 <div class="glass-panel p-4 h-100">
-                    <div class="feature-icon-wrapper">🌱</div>
+                    <div class="feature-icon-wrapper"><i class="bi bi-flower1"></i></div>
                     <h5 class="fw-bold">Always Fresh Ingredients</h5>
                     <p class="mb-0">Strict raw silo evaluations ensure batch quality remains consistent across operations.</p>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="glass-panel p-4 h-100">
-                    <div class="feature-icon-wrapper">📲</div>
+                    <div class="feature-icon-wrapper"><i class="bi bi-cart3"></i></div>
                     <h5 class="fw-bold">Easy Online Orders</h5>
                     <p class="mb-0">Registered corporate clients secure output batch allocations with real-time checkout pipelines.</p>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="glass-panel p-4 h-100">
-                    <div class="feature-icon-wrapper">📋</div>
+                    <div class="feature-icon-wrapper"><i class="bi bi-list-check"></i></div>
                     <h5 class="fw-bold">Plenty to Choose From</h5>
                     <p class="mb-0">Our processing units handle mixed grain matrix ratios specialized for diverse livestock portfolios.</p>
                 </div>
@@ -367,7 +445,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <!-- Left Sticky Cart -->
             <div class="col-12 col-lg-4">
                 <div class="glass-panel p-4 sticky-cart-card">
-                    <h5 class="fw-bold border-bottom pb-3 mb-3" style="font-family: var(--font-mono);">🛒 Your Cart</h5>
+                    <h5 class="fw-bold border-bottom pb-3 mb-3" style="font-family: var(--font-mono);"><i class="bi bi-cart3 me-2"></i>Your Cart</h5>
                     <?php if (empty($_SESSION['cart'])): ?>
                         <p class="mb-0 py-2">Your Cart is empty. Select product variants to populate.</p>
                     <?php else: ?>
@@ -391,8 +469,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                         <span class="small text-success" style="font-family: var(--font-mono);">LKR <?= number_format($itemPrice, 2) ?> × <?= $quantity ?></span>
                                     </div>
                                     <div class="d-flex align-items-center gap-1">
-                                        <button onclick="decreaseQty(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-warning border-0 p-1 px-2" title="Decrease by 1">➖</button>
-                                        <button onclick="removeItem(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-danger border-0 p-1" title="Remove completely">🗑️</button>
+                                        <button onclick="decreaseQty(<?= $cartItemID ?>)" class="icon-glass-btn btn btn-sm p-0" title="Decrease by 1"><i class="bi bi-dash"></i></button>
+                                        <button onclick="removeItem(<?= $cartItemID ?>)" class="icon-glass-btn btn btn-sm p-0" title="Remove completely"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -420,9 +498,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         <span class="small fw-bold text-dark me-2" style="font-family: var(--font-mono); letter-spacing: 1px;">FILTER:</span>
                         <button class="category-pill active" onclick="filterCategory('all', event)">All Products</button>
-                        <button class="category-pill" onclick="filterCategory('poultry', event)">Poultry Feed</button>
+                        <button class="category-pill" onclick="filterCategory('chicken', event)">Poultry Feed</button>
                         <button class="category-pill" onclick="filterCategory('pig', event)">Pig Feed</button>
-                        <button class="category-pill" onclick="filterCategory('cattle', event)">Cattle Mash</button>
+                        <button class="category-pill" onclick="filterCategory('cow', event)">Cattle Mash</button>
                     </div>
                 </div>
 
@@ -433,7 +511,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <div class="menu-card p-3 d-flex flex-column justify-content-between h-100">
                                     <div>
                                         <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center text-muted">
-                                            <span class="display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15));">🌾</span>
+                                            <i class="bi bi-flower2 display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15)); color: var(--forest-brand);"></i>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <h6 class="fw-bold text-dark mb-0"><?= htmlspecialchars($prod['name']) ?></h6>
@@ -445,7 +523,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid rgba(5, 150, 105, 0.15);">
                                         <span class="fw-bold fs-5 text-dark" style="font-family: var(--font-mono);">LKR <?= number_format($prod['unitprice'], 2) ?></span>
-                                        <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest">+ Add Item</button>
+                                        <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest"><i class="bi bi-plus-lg me-1"></i>Add Item</button>
                                     </div>
                                 </div>
                             </div>
@@ -475,17 +553,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
 
             <!-- Contact Information Pane (Highly Visible Text) -->
-            <div class="col-12 col-md-4 text-center">
+            <div class="col-12 col-md-4 footer-contact-col">
                 <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
-                <p class="small mb-1">📍 128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
-                <p class="small mb-1">✉️ support@tharufeedproducts.com</p>
-                <p class="small mb-0">📞 +94 11 2345 678</p>
+                <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
+                <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>support@tharufeedproducts.com</p>
+                <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 11 2345 678</p>
             </div>
 
             <!-- Portal Shortcuts -->
-            <div class="col-12 col-md-4 text-center text-md-end">
-                <a href="#landing-scroll-nav" class="btn btn-sm btn-outline-light px-3 me-2 mb-2" style="border-radius: 10px;">Back to Top</a>
-                <a href="auth/login.php" class="btn btn-sm btn-forest px-3 mb-2">Management Portal Login</a>
+            <div class="col-12 col-md-4 d-flex justify-content-center">
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <a href="#" id="backToTopBtn" onclick="scrollToTop(); return false;" class="btn btn-sm px-3 mb-2 glass-btn">Back to Top</a>
+                    <a href="auth/login.php" class="btn btn-sm px-3 mb-2 glass-btn">Management Portal Login</a>
+                </div>
             </div>
         </div>
     </div>
@@ -503,6 +583,10 @@ window.addEventListener('scroll', function() {
         }
     }
 });
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function filterCategory(category, event) {
     const pills = document.querySelectorAll('.category-pill');
