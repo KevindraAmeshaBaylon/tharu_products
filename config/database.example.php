@@ -1,5 +1,5 @@
 <?php
-// config/database.php
+// /model/config/database.php
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');

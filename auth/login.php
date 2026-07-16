@@ -1,7 +1,7 @@
 <?php
 // auth/login.php
 session_start();
-require_once dirname(__DIR__) . '/config/database.example.php';
+require_once dirname(__DIR__) . '/model/config/database.php';
 
 $error = "";
 

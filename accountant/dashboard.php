@@ -1,7 +1,11 @@
 <?php
 // accountant/dashboard.php
 session_start();
+<<<<<<< Updated upstream:accountant/dashboard.php
 require_once dirname(__DIR__) . '/config/database.example.php';
+=======
+require_once dirname(__DIR__) . '/model/config/database.php';
+>>>>>>> Stashed changes:view/accountant/dashboard.php
 
 // Strict Session Guard Check
 if (!isset($_SESSION['user_id']) || $_SESSION['username'] !== 'accountant01') {
