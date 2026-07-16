@@ -1,10 +1,10 @@
 <?php
 // stocksup/dashboard.php
 session_start();
-require_once dirname(__DIR__) . '/config/database.example.php';
+require_once dirname(__DIR__) . '/model/config/database.php';
 
 // Strict Session Guard Check
-if (!isset($_SESSION['user_id']) || $_SESSION['username'] !== 'stocksup01') {
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'stocksup') {
     header("Location: ../auth/login.php");
     exit;
 }
