@@ -150,5 +150,3 @@ $salesResult = $conn->query($salesQuery);
         </div>
     </div>
 </div>
-
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
