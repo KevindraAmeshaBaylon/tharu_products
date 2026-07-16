@@ -164,16 +164,6 @@ tharu_products/
 └── index.php              # Public storefront / product catalog
 ```
 
----
-
-## 🔀 Git Workflow
-
-- Never commit directly to `main`.
-- Create a feature branch per task: `feature/<name-or-role>-<what>`
-- Open a Pull Request into `main` when ready for review.
-
----
-
 ## 🧪 Testing Strategy
 
 Developed following the **Agile methodology**, with testing woven throughout each iteration:
