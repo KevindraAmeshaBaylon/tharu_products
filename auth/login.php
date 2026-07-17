@@ -28,39 +28,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $_SESSION['user_id'] = $user['userID'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['email'] = $user['email'];
-                $_SESSION['role'] = $user['role'];
+                $_SESSION['role'] = strtolower(trim((string)$user['role']));
 
-                $role = strtolower(trim((string)($user['role'] ?? 'cust')));
+                $role = $_SESSION['role'] ?: '';
                 $dashboardFile = 'cust_dashboard.php';
 
-                switch ($role) {
-                    case 'owner':
-                        $dashboardFile = 'owner_dashboard.php';
-                        break;
-                    case 'stocksup':
-                        $dashboardFile = 'stocksup_dashboard.php';
-                        break;
-                    case 'accountant':
-                        $dashboardFile = 'acc_dashboard.php';
-                        break;
-                    case 'salessup':
-                        $dashboardFile = 'salessup_dashboard.php';
-                        break;
-                    case 'worker':
-                        $dashboardFile = 'worker_dashboard.php';
-                        break;
-                    case 'driver':
-                        $dashboardFile = 'driver_dashboard.php';
-                        break;
-                    case 'cust':
-                    default:
-                        $dashboardFile = 'cust_dashboard.php';
-                        break;
+                // If the role is missing or invalid, infer it from accountant profile data.
+                $validRoles = ['owner', 'stocksup', 'accountant', 'salessup', 'worker', 'driver', 'cust'];
+                if ($role === '' || !in_array($role, $validRoles, true)) {
+                    $roleStmt = $conn->prepare("SELECT accountantID FROM Accountant_tbl WHERE userID = ? LIMIT 1");
+                    if ($roleStmt) {
+                        $roleStmt->bind_param("i", $user['userID']);
+                        $roleStmt->execute();
+                        $roleRes = $roleStmt->get_result();
+                        if ($roleRes && $roleRes->num_rows === 1) {
+                            $role = 'accountant';
+                            $_SESSION['role'] = $role;
+                        }
+                        $roleStmt->close();
+                    }
                 }
 
-                $redirectUrl = '../view/' . $dashboardFile;
-                header('Location: ' . $redirectUrl);
-                exit;
+                if ($role === 'accountant') {
+                    $accStmt = $conn->prepare("SELECT accountantID FROM Accountant_tbl WHERE userID = ? LIMIT 1");
+                    if ($accStmt) {
+                        $accStmt->bind_param("i", $user['userID']);
+                        $accStmt->execute();
+                        $accRes = $accStmt->get_result();
+                        if ($accRes && $accRes->num_rows === 1) {
+                            $accRow = $accRes->fetch_assoc();
+                            $_SESSION['accountant_id'] = $accRow['accountantID'];
+                        } else {
+                            $error_message = 'Accountant profile not found for this user. Please contact the administrator.';
+                        }
+                        $accStmt->close();
+                    } else {
+                        $error_message = 'Unable to load accountant profile data at this time.';
+                    }
+                }
+
+                if (empty($error_message)) {
+                    switch ($role) {
+                        case 'owner':
+                            $dashboardFile = 'owner_dashboard.php';
+                            break;
+                        case 'stocksup':
+                            $dashboardFile = 'stocksup_dashboard.php';
+                            break;
+                        case 'accountant':
+                            $dashboardFile = 'acc_dashboard.php';
+                            break;
+                        case 'salessup':
+                            $dashboardFile = 'salessup_dashboard.php';
+                            break;
+                        case 'worker':
+                            $dashboardFile = 'worker_dashboard.php';
+                            break;
+                        case 'driver':
+                            $dashboardFile = 'driver_dashboard.php';
+                            break;
+                        case 'cust':
+                        default:
+                            $dashboardFile = 'cust_dashboard.php';
+                            break;
+                    }
+
+                    $redirectUrl = '../view/' . $dashboardFile;
+                    header('Location: ' . $redirectUrl);
+                    exit;
+                }
             } else {
                 $error_message = 'Invalid password for the supplied username/email.';
             }
@@ -71,8 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error_message = 'Please fill in all details.';
     }
 }
-
-// --- SIGN UP PROCESSOR ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'signup') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);

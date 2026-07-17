@@ -8,13 +8,16 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SE
     exit;
 }
 
+// 2. Database Connection Wrapper
+// Adjust your path to wherever your database config sits (e.g., config.php or db.php)
+// Make sure your config file defines a working $conn PDO or mysqli instance.
 require_once __DIR__ . '/../model/config/database.php';
 $conn = getDBConnection();
 
-$username = $_SESSION['username'];
+$username = $_SESSION['username'] ?? 'Worker';
 $todayDate = date('Y-m-d');
 
-// 2. Fetch Daily Production Schedule (Mock setup assuming a production_tbl exists, falls back to safe array if table isn't built yet)
+// 3. Fetch Daily Production Schedule
 $scheduleItems = [];
 $tableExistsCheck = $conn->query("SHOW TABLES LIKE 'production_tbl'");
 
@@ -42,255 +45,265 @@ if ($tableExistsCheck && $tableExistsCheck->num_rows > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Worker Matrix Dashboard</title>
-    <!-- Framework Styles -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+    <title>Worker Dashboard - Tharu & Products Systems</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
     <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-            min-height: 100vh;
-            display: flex;
+        :root {
+            --sidebar-bg: #0b1a10;
+            --sidebar-active: #1e3a24;
+            --forest-main: #2e7d32;
+            --mint-light: #e8f5e9;
+            --canvas-bg: #f8faf9;
         }
 
-        /* Sidebar navigation drawer */
-        .sidebar {
+        body {
+            background-color: var(--canvas-bg);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        .dashboard-wrapper {
+            display: flex;
+            position: relative;
+        }
+
+        .sidebar-panel {
             width: 260px;
-            background: #15803d; /* Forest Green Theme */
+            background-color: var(--sidebar-bg);
             color: #ffffff;
+            padding: 2rem 1rem;
             flex-shrink: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 1000;
             display: flex;
             flex-direction: column;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            justify-content: space-between;
         }
 
-        .sidebar-brand {
-            padding: 24px;
-            font-size: 1.25rem;
-            font-weight: 800;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            letter-spacing: 0.5px;
-        }
-
-        .sidebar-menu {
-            padding: 20px 14px;
-            list-style: none;
-            margin: 0;
+        .main-content {
             flex-grow: 1;
+            margin-left: 260px;
+            padding: 2.5rem;
+            width: calc(100% - 260px);
         }
 
-        .sidebar-item a {
+        .nav-dash-link {
             display: flex;
             align-items: center;
             gap: 12px;
-            color: rgba(255,255,255,0.8);
+            color: #a3b899;
             text-decoration: none;
-            padding: 12px 16px;
+            padding: 0.85rem 1rem;
             border-radius: 12px;
+            margin-bottom: 0.5rem;
             font-weight: 500;
             transition: all 0.2s ease;
+            cursor: pointer;
         }
-
-        .sidebar-item.active a, .sidebar-item a:hover {
-            background: rgba(255, 255, 255, 0.15);
+        
+        .nav-dash-link:hover, .nav-dash-link.active {
+            background-color: var(--sidebar-active);
             color: #ffffff;
         }
 
-        /* Content window wrapper */
-        .main-workspace {
-            flex-grow: 1;
-            padding: 40px;
-            overflow-y: auto;
+        .sidebar-profile-footer {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            margin-top: auto;
         }
 
-        .top-navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 35px;
-        }
-
-        .greeting-title {
-            font-weight: 800;
-            font-size: 1.85rem;
-            color: #0f172a;
-        }
-
-        .stat-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+        .stat-card-dark {
+            background-color: #122919;
+            color: #ffffff;
             border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+            padding: 1.5rem;
+            border: none;
         }
-
-        /* Table custom stylings */
-        .schedule-table-card {
+        
+        .stat-card-light {
             background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid #eef2f0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
 
-        .table th {
-            background: #f8fafc;
-            color: #64748b;
+        .metric-value {
+            font-size: 1.85rem;
             font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .custom-table th {
+            background-color: #f1f5f3;
+            color: #475569;
+            font-size: 0.78rem;
             text-transform: uppercase;
-            font-size: 0.75rem;
             letter-spacing: 0.5px;
-            padding: 18px 24px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .table td {
-            padding: 18px 24px;
-            vertical-align: middle;
-            color: #334155;
-            font-weight: 500;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .badge-status {
-            padding: 6px 12px;
-            border-radius: 50px;
-            font-size: 0.8rem;
             font-weight: 700;
+            padding: 1rem;
         }
-
-        .badge-pending { background: #fef3c7; color: #d97706; }
-        .badge-progress { background: #dbeafe; color: #2563eb; }
-        .badge-completed { background: #dcfce7; color: #16a34a; }
+        
+        .custom-table td {
+            padding: 1rem;
+            vertical-align: middle;
+            font-size: 0.92rem;
+        }
     </style>
 </head>
 <body>
 
-    <!-- SIDEBAR DRAWING MATRIX -->
-    <div class="sidebar">
-        <div class="sidebar-brand">
-            <i class="bi bi-nut-fill me-1 text-warning"></i> Tharu Products
+<div class="dashboard-wrapper">
+    
+    <!-- LEFT SIDEBAR VIEW MATRIX CONTROLLER -->
+    <div class="sidebar-panel">
+        <div>
+            <div class="d-flex align-items-center gap-2 px-2 mb-4">
+                <i class="bi bi-nut-fill text-warning fs-4"></i>
+                <h5 class="fw-bold mb-0 text-white font-monospace">THARU WORKER</h5>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            
+            <div class="nav flex-column" id="dashboardTabs" role="tablist">
+                <a class="nav-dash-link active" id="tab-schedule" data-bs-toggle="tab" href="#panel-schedule" role="tab">
+                    <i class="bi bi-calendar3 me-2"></i> Day Schedule
+                </a>
+                <a class="nav-dash-link" id="tab-machine" data-bs-toggle="tab" href="#panel-machine" role="tab">
+                    <i class="bi bi-tools me-2"></i> Machine Status
+                </a>
+            </div>
         </div>
-        <ul class="sidebar-menu">
-            <li class="sidebar-item active">
-                <a href="#"><i class="bi bi-calendar3"></i> Day Schedule</a>
-            </li>
-            <li class="sidebar-item">
-                <a href="#"><i class="bi bi-tools"></i> Machine Status</a>
-            </li>
-        </ul>
-        <div class="p-3 border-top border-light border-opacity-10">
-            <a href="../auth/logout.php" class="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2" style="border-radius: 12px; font-weight: 600;">
-                <i class="bi bi-box-arrow-left"></i> Sign Out
+
+        <div class="sidebar-profile-footer">
+            <a href="../auth/logout.php" class="text-danger text-decoration-none d-flex align-items-center gap-2 small fw-bold" style="letter-spacing: 0.3px;">
+                <i class="bi bi-box-arrow-right"></i> Sign out user
             </a>
         </div>
     </div>
 
-    <!-- MAIN APP SPACE -->
-    <div class="main-workspace">
-        <div class="top-navbar">
-            <div>
-                <h1 class="greeting-title">Floor Operations Dashboard</h1>
-                <p class="text-muted mb-0">Operator: <strong class="text-dark"><?= htmlspecialchars($username) ?></strong> | Production Node Environment</p>
-            </div>
-            <div class="bg-white px-4 py-2 border rounded-pill shadow-sm text-muted fw-bold small">
-                <i class="bi bi-clock-fill text-success me-2"></i><?= date('F d, Y') ?>
-            </div>
-        </div>
+    <!-- MAIN DASHBOARD DATA VIEWPORT -->
+    <div class="main-content">
+        <div class="tab-content" id="dashboardTabContent">
+            
+            <!-- ================= TAB 1: SCHEDULE MATRIX ================= -->
+            <div class="tab-pane fade show active" id="panel-schedule" role="tabpanel">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Floor Operations Dashboard</h3>
+                        <p class="text-muted small mb-0">Operator: <strong class="text-dark"><?= htmlspecialchars($username) ?></strong> | Production Node Environment</p>
+                    </div>
+                    <div class="bg-white px-4 py-2 border rounded-pill shadow-sm text-muted fw-bold small">
+                        <i class="bi bi-clock-fill text-success me-2"></i><?= date('F d, Y') ?>
+                    </div>
+                </div>
 
-        <!-- LIVE SUMMARY BLOCKS -->
-        <div class="row g-4 mb-5">
-            <div class="col-md-4">
-                <div class="stat-card d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-muted d-block small fw-bold text-uppercase mb-1">Assigned Runs</span>
-                        <h3 class="fw-extrabold mb-0" style="font-size: 1.8rem; font-weight:800;"><?= count($scheduleItems) ?></h3>
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card-dark shadow-sm">
+                            <span class="text-white-50 small text-uppercase">Assigned Runs</span>
+                            <div class="metric-value mt-1"><?= count($scheduleItems) ?></div>
+                            <span class="text-success small fw-bold">▲ Active</span> <span class="text-white-50 small">batch allocations</span>
+                        </div>
                     </div>
-                    <div class="bg-success bg-opacity-10 p-3 rounded-4 text-success fs-3"><i class="bi bi-list-task"></i></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-muted d-block small fw-bold text-uppercase mb-1">Target Quantity</span>
-                        <h3 class="fw-extrabold mb-0" style="font-size: 1.8rem; font-weight:800;">
-                            <?= array_sum(array_column($scheduleItems, 'quantity')) ?> units
-                        </h3>
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card-light shadow-sm">
+                            <span class="text-muted small text-uppercase">Target Quantity</span>
+                            <div class="metric-value mt-1 text-dark"><?= array_sum(array_column($scheduleItems, 'quantity')) ?> <span class="fs-5 text-muted">units</span></div>
+                            <span class="text-success small fw-bold">Calculated</span> <span class="text-muted small">daily volume</span>
+                        </div>
                     </div>
-                    <div class="bg-warning bg-opacity-10 p-3 rounded-4 text-warning fs-3"><i class="bi bi-box-seam"></i></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-muted d-block small fw-bold text-uppercase mb-1">Line Efficiency Target</span>
-                        <h3 class="fw-extrabold mb-0" style="font-size: 1.8rem; font-weight:800;">100%</h3>
+                    <div class="col-12 col-md-4">
+                        <div class="stat-card-light shadow-sm">
+                            <span class="text-muted small text-uppercase">Line Efficiency Target</span>
+                            <div class="metric-value mt-1 text-success">100%</div>
+                            <span class="text-primary small fw-bold">✓ Optimal Status</span>
+                        </div>
                     </div>
-                    <div class="bg-info bg-opacity-10 p-3 rounded-4 text-info fs-3"><i class="bi bi-speedometer2"></i></div>
                 </div>
-            </div>
-        </div>
 
-        <!-- PRODUCTION SCHEDULE DATA CONTAINER -->
-        <div class="card schedule-table-card border-0">
-            <div class="card-header bg-white border-0 px-4 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-activity text-success me-2"></i>Live Factory Schedule</h5>
-                <button onclick="window.location.reload();" class="btn btn-sm btn-light border fw-bold text-secondary"><i class="bi bi-arrow-clockwise me-1"></i> Refresh Matrix</button>
+                <div class="card border-0 shadow-sm p-4 rounded-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-activity text-success me-2"></i>Live Factory Schedule</h5>
+                        <button onclick="window.location.reload();" class="btn btn-sm btn-light border fw-bold text-secondary">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh Matrix
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table custom-table border align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Line No</th>
+                                    <th>Batch Identifier</th>
+                                    <th>Product Line Allocation</th>
+                                    <th>Volume Target</th>
+                                    <th>State Indicator</th>
+                                    <th class="text-center">Floor Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(empty($scheduleItems)): ?>
+                                    <tr><td colspan="6" class="text-center text-muted py-4">No production runs scheduled for today.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($scheduleItems as $item): ?>
+                                        <tr>
+                                            <td><span class="badge bg-secondary rounded-3 px-2 py-1 fw-bold">Line <?= htmlspecialchars($item['line_number']) ?></span></td>
+                                            <td><span class="font-monospace fw-bold">#<?= htmlspecialchars($item['batchID']) ?></span></td>
+                                            <td class="fw-medium text-dark"><?= htmlspecialchars($item['product_name']) ?></td>
+                                            <td><?= number_format($item['quantity']) ?> pcs</td>
+                                            <td>
+                                                <?php 
+                                                $statusClean = strtolower(trim($item['status']));
+                                                if ($statusClean === 'completed') {
+                                                    echo '<span class="badge bg-success-subtle text-success border px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i> Completed</span>';
+                                                } elseif ($statusClean === 'in progress') {
+                                                    echo '<span class="badge bg-primary-subtle text-primary border px-2 py-1"><i class="bi bi-gear-wide-connected me-1"></i> Running</span>';
+                                                } else {
+                                                    echo '<span class="badge bg-warning-subtle text-warning border px-2 py-1"><i class="bi bi-pause-circle-fill me-1"></i> Staged</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <?php if ($statusClean !== 'completed'): ?>
+                                                    <button class="btn btn-sm btn-outline-success fw-bold" onclick="alert('Batch runtime tracking updated.')">
+                                                        Update State
+                                                    </button>
+                                                <?php else: ?>
+                                                    <span class="text-muted small fw-bold"><i class="bi bi-lock-fill"></i> Logged</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead>
-                        <tr>
-                            <th>Line No</th>
-                            <th>Batch Identifier</th>
-                            <th>Product Line Allocation</th>
-                            <th>Volume Target</th>
-                            <th>State Indicator</th>
-                            <th class="text-center">Floor Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($scheduleItems as $item): ?>
-                            <tr>
-                                <td><span class="badge bg-secondary rounded-3 px-2.5 py-1.5 fw-bold">Line <?= htmlspecialchars($item['line_number']) ?></span></td>
-                                <td class="text-dark fw-bold">#<?= htmlspecialchars($item['batchID']) ?></td>
-                                <td><?= htmlspecialchars($item['product_name']) ?></td>
-                                <td class="fw-bold"><?= number_format($item['quantity']) ?> pcs</td>
-                                <td>
-                                    <?php 
-                                    $statusClean = strtolower(trim($item['status']));
-                                    if ($statusClean === 'completed') {
-                                        echo '<span class="badge-status badge-completed"><i class="bi bi-check-circle-fill me-1"></i> Completed</span>';
-                                    } elseif ($statusClean === 'in progress') {
-                                        echo '<span class="badge-status badge-progress"><i class="bi bi-gear-wide-connected spin me-1"></i> Running</span>';
-                                    } else {
-                                        echo '<span class="badge-status badge-pending"><i class="bi bi-pause-circle-fill me-1"></i> Staged</span>';
-                                    }
-                                    ?>
-                                </td>
-                                <td class="text-center">
-                                    <?php if ($statusClean !== 'completed'): ?>
-                                        <button class="btn btn-sm btn-success px-3 fw-bold shadow-sm" style="border-radius: 8px;" onclick="alert('Batch runtime tracking updated.')">
-                                            Update State
-                                        </button>
-                                    <?php else: ?>
-                                        <span class="text-muted small fw-bold"><i class="bi bi-lock-fill"></i> Logged</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+
+            <!-- ================= TAB 2: MACHINE STATUS (Placeholder) ================= -->
+            <div class="tab-pane fade" id="panel-machine" role="tabpanel">
+                 <div class="card border-0 shadow-sm p-4 rounded-4 text-center py-5">
+                     <i class="bi bi-tools text-muted mb-3" style="font-size: 3rem;"></i>
+                     <h4 class="fw-bold text-dark">Machine Status Portal</h4>
+                     <p class="text-muted">Hardware telemetry and maintenance logs will appear here.</p>
+                 </div>
             </div>
+
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
