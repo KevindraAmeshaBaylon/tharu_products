@@ -463,7 +463,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <div style="width: 60px; height: 3px; background-color: var(--forest-brand); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
                     <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted) !important;">
                         Welcome to <strong class="text-dark">Tharu Products</strong>. <br>
+<<<<<<< HEAD
+                        We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms with reliability and excellence.<br>
+=======
                         We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms.<br>
+>>>>>>> c01c9cccd77fc290df1677c8b8519b179c1634e0
                         With years of industry experience, we source quality raw materials from trusted suppliers and transform them into carefully formulated animal feed that meets the nutritional needs of livestock.
                         <br>Our mission is simple: <strong class="text-dark">to empower the agricultural industry by providing dependable, high-quality animal feed solutions that promote healthier animals and stronger farming communities.</strong>.
                     </p>
@@ -587,7 +591,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid rgba(5, 150, 105, 0.15);">
                                         <span class="fw-bold fs-5 text-dark" style="font-family: var(--font-mono);">LKR <?= number_format($prod['unitprice'], 2) ?></span>
                                         <div class="d-flex gap-1">
-                                            <button onclick="viewDetails(<?= htmlspecialchars(json_encode($prod)) ?>)" class="btn btn-sm btn-outline-success"><i class="bi bi-eye"></i> Details</button>
                                             <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest"><i class="bi bi-plus-lg me-1"></i>Add Item</button>
                                         </div>
                                     </div>
@@ -621,9 +624,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <!-- Contact Information Pane (Highly Visible Text) -->
             <div class="col-12 col-md-4 footer-contact-col">
                 <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
+<<<<<<< HEAD
+                <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>No.369, Negambo Road, Marandagahamulla, Sri Lanka</p>
+                <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>tharu&products@gmail.com</p>
+                <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 72 313 5134</p>
+=======
                 <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>No.235, Negambo Road,Marandagahamulla</p>
                 <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>tharufeedproducts@gmail.com</p>
                 <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 11 2345 678</p>
+>>>>>>> c01c9cccd77fc290df1677c8b8519b179c1634e0
             </div>
 
             <!-- Portal Shortcuts -->
