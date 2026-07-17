@@ -181,7 +181,7 @@ Developed following the **Agile methodology**, with testing woven throughout eac
 **Group 05 — Diploma in Software Engineering, School of Computing and Engineering**
 Supervised by **Ms. Amaya Lokuliyana**
 
-| Name |
+| Members |
 |---|
 | Ranasinghe S. N. |
 | Baylon K. A. |
