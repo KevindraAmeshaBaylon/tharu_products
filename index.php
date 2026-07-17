@@ -463,12 +463,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <div style="width: 60px; height: 3px; background-color: var(--forest-brand); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
                     <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted) !important;">
                         Welcome to <strong class="text-dark">Tharu Products</strong>. <br>
-                        We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms with reliability and excellence.<br>
-
-                        With years of industry experience, we source quality raw materials from trusted suppliers and transform them into carefully formulated animal feed that meets the nutritional needs of livestock. Our focus is on maintaining consistent quality, ensuring timely deliveries, and building long-term partnerships with our customers.
-
-                        Driven by innovation, our business embraces modern technology to streamline operations, improve inventory management, and enhance customer service. <br>Through our web-based platform, we aim to provide a seamless experience where customers can explore our products, place orders, and stay connected with us more efficiently than ever before.
-
+                        We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms.<br>
+                        With years of industry experience, we source quality raw materials from trusted suppliers and transform them into carefully formulated animal feed that meets the nutritional needs of livestock.
                         <br>Our mission is simple: <strong class="text-dark">to empower the agricultural industry by providing dependable, high-quality animal feed solutions that promote healthier animals and stronger farming communities.</strong>.
                     </p>
                 </div>
@@ -625,8 +621,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <!-- Contact Information Pane (Highly Visible Text) -->
             <div class="col-12 col-md-4 footer-contact-col">
                 <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
-                <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
-                <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>support@tharufeedproducts.com</p>
+                <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>No.235, Negambo Road,Marandagahamulla</p>
+                <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>tharufeedproducts@gmail.com</p>
                 <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 11 2345 678</p>
             </div>
 
