@@ -91,20 +91,20 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <hr style="border-color: rgba(255,255,255,0.1);">
         
         <div class="nav flex-column">
-            <a href="dashboard.php" class="nav-dash-link <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>">📊 Dashboard</a>
-            <a href="customers.php" class="nav-dash-link <?php echo ($currentPage == 'customers.php') ? 'active' : ''; ?>">👥 Customers</a>
-            <a href="orders.php" class="nav-dash-link <?php echo ($currentPage == 'orders.php') ? 'active' : ''; ?>">📦 Orders</a>
-            <a href="stock_levels.php" class="nav-dash-link <?php echo ($currentPage == 'stock_levels.php') ? 'active' : ''; ?>">📈 Stock Levels</a>
-            <a href="sold_units.php" class="nav-dash-link <?php echo ($currentPage == 'sold_units.php') ? 'active' : ''; ?>">🏷️ Sold Units</a>
-            <a href="delivery_assignment.php" class="nav-dash-link <?php echo ($currentPage == 'delivery_assignment.php') ? 'active' : ''; ?>">🚚 Delivery Assignment</a>
-            <a href="drivers.php" class="nav-dash-link <?php echo ($currentPage == 'drivers.php') ? 'active' : ''; ?>">🚐 Drivers</a>
-            <a href="sales_reports.php" class="nav-dash-link <?php echo ($currentPage == 'sales_reports.php') ? 'active' : ''; ?>">📄 Sales Reports</a>
+            <a href="dashboard.php" class="nav-dash-link <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>"><i class="bi bi-bar-chart-fill"></i> Dashboard</a>
+            <a href="customers.php" class="nav-dash-link <?php echo ($currentPage == 'customers.php') ? 'active' : ''; ?>"><i class="bi bi-people-fill"></i> Customers</a>
+            <a href="orders.php" class="nav-dash-link <?php echo ($currentPage == 'orders.php') ? 'active' : ''; ?>"><i class="bi bi-box-seam"></i> Orders</a>
+            <a href="stock_levels.php" class="nav-dash-link <?php echo ($currentPage == 'stock_levels.php') ? 'active' : ''; ?>"><i class="bi bi-graph-up"></i> Stock Levels</a>
+            <a href="sold_units.php" class="nav-dash-link <?php echo ($currentPage == 'sold_units.php') ? 'active' : ''; ?>"><i class="bi bi-tags-fill"></i> Sold Units</a>
+            <a href="delivery_assignment.php" class="nav-dash-link <?php echo ($currentPage == 'delivery_assignment.php') ? 'active' : ''; ?>"><i class="bi bi-truck"></i> Delivery Assignment</a>
+            <a href="drivers.php" class="nav-dash-link <?php echo ($currentPage == 'drivers.php') ? 'active' : ''; ?>"><i class="bi bi-bus-front"></i> Drivers</a>
+            <a href="sales_reports.php" class="nav-dash-link <?php echo ($currentPage == 'sales_reports.php') ? 'active' : ''; ?>"><i class="bi bi-file-earmark-text"></i> Sales Reports</a>
         </div>
     </div>
 
     <div class="sidebar-profile-footer">
         <a href="../../auth/logout.php" class="text-danger text-decoration-none d-flex align-items-center gap-2 small fw-bold" style="letter-spacing: 0.3px;">
-            ➜🚪 Sign out 
+            <i class="bi bi-box-arrow-right"></i> Sign out 
         </a>
     </div>
 </div>

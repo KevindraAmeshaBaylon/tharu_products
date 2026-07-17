@@ -61,6 +61,8 @@ $conn->close();
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <!-- Chart.js Engine CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -152,7 +154,7 @@ $conn->close();
                     </div>
 
                     <div class="p-3 rounded-3" style="background-color: var(--mint-light); border: 1px solid #e8f5e9;">
-                        <span class="small text-success fw-bold d-block">✓ Dispatch Verification Active</span>
+                        <span class="small text-success fw-bold d-block"><i class="bi bi-check2-circle"></i> Dispatch Verification Active</span>
                         <span class="small text-muted">Data points reflect warehouse output cycles verified by the logistics deck.</span>
                     </div>
                 </div>

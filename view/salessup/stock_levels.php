@@ -75,6 +75,8 @@ $conn->close();
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
     <!-- Chart.js for the diagram -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -161,7 +163,7 @@ $conn->close();
                 <h3 class="fw-bold text-dark mb-1">Stock Levels</h3>
                 <span class="text-muted small">Monitor raw material inventory and adjust quantities</span>
             </div>
-            <button class="btn btn-forest px-4" onclick="openAddModal()">➕ Add New Material</button>
+            <button class="btn btn-forest px-4" onclick="openAddModal()"><i class="bi bi-plus-lg"></i> Add New Material</button>
         </div>
 
         <!-- Diagram / Chart Card -->
@@ -206,7 +208,7 @@ $conn->close();
                                     '<?php echo htmlspecialchars(addslashes($row['name'])); ?>', 
                                     '<?php echo $row['quantity']; ?>', 
                                     '<?php echo $row['unitprice']; ?>'
-                                )">⚙️ Adjust Stock</button>
+                                )"><i class="bi bi-gear"></i> Adjust Stock</button>
                             </td>
                         </tr>
                         <?php 

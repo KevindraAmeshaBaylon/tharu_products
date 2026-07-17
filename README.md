@@ -20,44 +20,44 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 **Tharu & Products** is an animal feed supplier based in Maradagahamula, Sri Lanka, producing feed for chickens, cows, and pigs for both large client farms and independent small farms. Like many growing SMEs, the business has historically run on **paper logs and manual calculations** — a system prone to human error, data loss, and inefficiency as the business scales.
 
 This project replaces that manual workflow with a **role-based web application** that centralizes:
 
-- 👥 **Employee & payroll management** — attendance, salaries, OT, and holiday bonuses
-- 📦 **Stock & production tracking** — raw materials, production batches, and finished goods
-- 💰 **Sales & customer management** — orders, deliveries, income, and profit reporting
+- **Employee & payroll management** — attendance, salaries, OT, and holiday bonuses
+- **Stock & production tracking** — raw materials, production batches, and finished goods
+- **Sales & customer management** — orders, deliveries, income, and profit reporting
 
 Built as a Final Year Diploma Project (DSE25.2F Batch — School of Computing and Engineering) using the **Agile development model**, with real-world requirements gathered directly from the business owner and staff.
 
 ---
 
-## ✨ Features
+## Features
 
 The system is built around **six role-based dashboards**, each scoped to exactly what that user needs — nothing more.
 
 | Role | Key Capabilities |
 |---|---|
-| 👑 **Owner** | Executive KPI dashboard, calculates the accountant's salary/OT/bonuses, assigns suppliers & customers to supervisors, oversees legal agreements and all employee records |
-| 🧾 **Accountant** | Calculates salaries, OT, and bonuses for supervisors, workers & drivers; records operational costs; generates sales, expense, and profit reports |
-| 📊 **Stock Supervisor** | Manages suppliers & raw material purchases, tracks materials sent to production, monitors finished-stock levels, and traces each production batch back to its source |
-| 🚚 **Sales Supervisor** | Manages customer orders, sold units, driver/delivery assignments, income records, and daily sales summaries |
-| 🏭 **Worker** | Views assigned production schedule, floor operations dashboard, and daily task status |
-| 🚛 **Driver** | Views assigned deliveries and delivery status |
-| 🛒 **Customer** | Public product catalog with live cart, order placement, checkout & payment, and order history — no office visit required |
+| **Owner** | Executive KPI dashboard, calculates the accountant's salary/OT/bonuses, assigns suppliers & customers to supervisors, oversees legal agreements and all employee records |
+| **Accountant** | Calculates salaries, OT, and bonuses for supervisors, workers & drivers; records operational costs; generates sales, expense, and profit reports |
+| **Stock Supervisor** | Manages suppliers & raw material purchases, tracks materials sent to production, monitors finished-stock levels, and traces each production batch back to its source |
+| **Sales Supervisor** | Manages customer orders, sold units, driver/delivery assignments, income records, and daily sales summaries |
+| **Worker** | Views assigned production schedule, floor operations dashboard, and daily task status |
+| **Driver** | Views assigned deliveries and delivery status |
+| **Customer** | Public product catalog with live cart, order placement, checkout & payment, and order history — no office visit required |
 
 **Cross-cutting features:**
-- 🔐 Secure, **role-based authentication** — every login redirects to the correct dashboard, and sensitive data (e.g. salaries) is hidden from workers/drivers
-- 🧮 Automatic calculation of salaries, OT, bonuses, and profit margins — no more manual arithmetic
-- 📈 Auto-generated reports: sales, expenses, and monthly profit summaries
-- 🗃️ Centralized MySQL database replacing paper-based records
-- 🌐 Responsive UI (Bootstrap) usable across desktops, tablets, and phones
+- Secure, **role-based authentication** — every login redirects to the correct dashboard, and sensitive data (e.g. salaries) is hidden from workers/drivers
+- Automatic calculation of salaries, OT, bonuses, and profit margins — no more manual arithmetic
+- Auto-generated reports: sales, expenses, and monthly profit summaries
+- Centralized MySQL database replacing paper-based records
+- Responsive UI (Bootstrap) usable across desktops, tablets, and phones
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -69,7 +69,7 @@ The system is built around **six role-based dashboards**, each scoped to exactly
 
 ---
 
-## 🗄 Database Design
+## Database Design
 
 The schema (`model/database.sql`) follows a **table-per-type inheritance** design: a central `User_tbl` holds shared identity/auth data, and each role (`Owner_tbl`, `StockSuperviser_tbl`, `Accountant_tbl`, `SalesSuperviser_tbl`, `Worker_tbl`, `Driver_tbl`, `Customer_tbl`) extends it with role-specific fields.
 
@@ -83,7 +83,7 @@ Around this identity core, the schema models the full business domain:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - [XAMPP](https://www.apachefriends.org/) (or any Apache + PHP 8+ + MySQL stack)
@@ -129,7 +129,7 @@ Around this identity core, the schema models the full business domain:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 tharu_products/
@@ -164,7 +164,7 @@ tharu_products/
 └── index.php              # Public storefront / product catalog
 ```
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 Developed following the **Agile methodology**, with testing woven throughout each iteration:
 
@@ -176,7 +176,7 @@ Developed following the **Agile methodology**, with testing woven throughout eac
 
 ---
 
-## 👥 Team
+## Team
 
 **Group 05 — Diploma in Software Engineering, School of Computing and Engineering**
 Supervised by **Ms. Amaya Lokuliyana**
@@ -194,6 +194,6 @@ Built for **Tharu & Products**, owned by **Mr. M. P. Ajith Pathirana**.
 
 <div align="center">
 
-*Made with 🌾 for a business that deserved better than paper and a calculator.*
+
 
 </div>

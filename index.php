@@ -17,7 +17,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $id = intval($_POST['product_id']);
 
     if ($_POST['action'] === 'add_to_cart') {
-        $_SESSION['cart'][$id] = ($_SESSION['cart'][$id] ?? 0) + 1;
+        $qty = isset($_POST['qty']) ? intval($_POST['qty']) : 1;
+        if ($qty <= 0) $qty = 1;
+        $_SESSION['cart'][$id] = ($_SESSION['cart'][$id] ?? 0) + $qty;
         echo json_encode(['status' => 'success', 'cart_count' => array_sum($_SESSION['cart'])]);
         exit;
     }
@@ -530,12 +532,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <!-- Right Catalog List -->
             <div class="col-12 col-lg-8">
                 <div class="glass-panel p-4 mb-4">
-                    <div class="d-flex flex-wrap gap-2 align-items-center">
-                        <span class="small fw-bold text-dark me-2" style="font-family: var(--font-mono); letter-spacing: 1px;">FILTER:</span>
-                        <button class="category-pill active" onclick="filterCategory('all', event)">All Products</button>
-                        <button class="category-pill" onclick="filterCategory('chicken', event)">Poultry Feed</button>
-                        <button class="category-pill" onclick="filterCategory('pig', event)">Pig Feed</button>
-                        <button class="category-pill" onclick="filterCategory('cow', event)">Cattle Mash</button>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <span class="small fw-bold text-dark me-2" style="font-family: var(--font-mono); letter-spacing: 1px;">FILTER:</span>
+                                <button class="category-pill active" onclick="filterCategory('all', event)">All Products</button>
+                                <button class="category-pill" onclick="filterCategory('chicken', event)">Poultry Feed</button>
+                                <button class="category-pill" onclick="filterCategory('pig', event)">Pig Feed</button>
+                                <button class="category-pill" onclick="filterCategory('cow', event)">Cattle Mash</button>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-success"></i></span>
+                                <input type="text" id="productSearch" class="form-control border-start-0" placeholder="Search products by name or description..." oninput="filterProducts()">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -578,7 +590,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid rgba(5, 150, 105, 0.15);">
                                         <span class="fw-bold fs-5 text-dark" style="font-family: var(--font-mono);">LKR <?= number_format($prod['unitprice'], 2) ?></span>
-                                        <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest"><i class="bi bi-plus-lg me-1"></i>Add Item</button>
+                                        <div class="d-flex gap-1">
+                                            <button onclick="viewDetails(<?= htmlspecialchars(json_encode($prod)) ?>)" class="btn btn-sm btn-outline-success"><i class="bi bi-eye"></i> Details</button>
+                                            <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest"><i class="bi bi-plus-lg me-1"></i>Add Item</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -643,17 +658,29 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+let activeCategory = 'all';
+
 function filterCategory(category, event) {
     const pills = document.querySelectorAll('.category-pill');
     pills.forEach(p => p.classList.remove('active'));
     event.currentTarget.classList.add('active');
+    activeCategory = category;
+    filterProducts();
+}
 
+function filterProducts() {
+    const searchQuery = document.getElementById('productSearch').value.toLowerCase();
     const cards = document.querySelectorAll('.product-card-wrapper');
+    
     cards.forEach(card => {
         const productCategory = card.getAttribute('data-category');
-        if (category === 'all') {
-            card.style.display = 'block';
-        } else if (productCategory.includes(category)) {
+        const productName = card.querySelector('h6').innerText.toLowerCase();
+        const productDesc = card.querySelector('.card-text').innerText.toLowerCase();
+        
+        const matchesCategory = (activeCategory === 'all' || productCategory.includes(activeCategory));
+        const matchesSearch = (productName.includes(searchQuery) || productDesc.includes(searchQuery));
+        
+        if (matchesCategory && matchesSearch) {
             card.style.display = 'block';
         } else {
             card.style.display = 'none';
@@ -661,10 +688,11 @@ function filterCategory(category, event) {
     });
 }
 
-function addUnit(productId) {
+function addUnit(productId, qty = 1) {
     const formData = new FormData();
     formData.append('action', 'add_to_cart');
     formData.append('product_id', productId);
+    formData.append('qty', qty);
 
     fetch('index.php', { method: 'POST', body: formData })
     .then(res => res.json())
@@ -673,6 +701,36 @@ function addUnit(productId) {
             window.location.reload();
         }
     });
+}
+
+function viewDetails(product) {
+    document.getElementById('modalProductID').value = product.productID;
+    document.getElementById('modalProductName').innerText = product.name;
+    document.getElementById('modalProductType').innerText = product.type || 'General Feed';
+    document.getElementById('modalProductDesc').innerText = product.description || 'Wholesome formulation optimized for high performance and daily feed schedules.';
+    document.getElementById('modalProductPrice').innerText = 'LKR ' + parseFloat(product.unitprice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
+    let imgSrc = 'images/LOGO.png';
+    const lowercaseName = product.name.toLowerCase();
+    const lowercaseType = (product.type || '').toLowerCase();
+    if (lowercaseName.includes('chicken') || lowercaseType.includes('chicken') || lowercaseType.includes('poultry')) {
+        imgSrc = 'images/chickenfeed.jpg';
+    } else if (lowercaseName.includes('pig') || lowercaseType.includes('pig')) {
+        imgSrc = 'images/pigfeed.jpg';
+    } else if (lowercaseName.includes('cow') || lowercaseName.includes('cattle') || lowercaseType.includes('cow') || lowercaseType.includes('cattle') || lowercaseName.includes('mash')) {
+        imgSrc = 'images/cowfeed.png';
+    }
+    document.getElementById('modalProductImg').src = imgSrc;
+    document.getElementById('modalProductQty').value = 1;
+    
+    const myModal = new bootstrap.Modal(document.getElementById('productDetailsModal'));
+    myModal.show();
+}
+
+function addProductFromModal() {
+    const id = document.getElementById('modalProductID').value;
+    const qty = parseInt(document.getElementById('modalProductQty').value) || 1;
+    addUnit(id, qty);
 }
 
 function removeItem(productId) {
@@ -835,3 +893,35 @@ window.addEventListener('DOMContentLoaded', () => {
     new AntigravityEffect();
 });
 </script>
+
+<!-- Product Details Modal -->
+<div class="modal fade" id="productDetailsModal" tabindex="-1" aria-labelledby="productDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border border-success rounded-4" style="background: rgba(255, 255, 255, 0.98) !important; backdrop-filter: blur(20px) !important;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success" id="productDetailsModalLabel">Product Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <img id="modalProductImg" src="images/LOGO.png" alt="Product Image" class="img-fluid rounded-3 border" style="max-height: 220px; object-fit: cover; width: 100%;">
+                </div>
+                <h4 id="modalProductName" class="fw-bold text-dark mb-1">Product Name</h4>
+                <span id="modalProductType" class="badge bg-success-subtle text-success border border-success mb-3">Category</span>
+                <p id="modalProductDesc" class="text-muted mb-4">Detailed description goes here...</p>
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top border-success-subtle">
+                    <div>
+                        <span class="small text-muted d-block">Unit Price</span>
+                        <h4 id="modalProductPrice" class="fw-bold text-dark font-monospace mb-0">LKR 0.00</h4>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="modalProductQty" class="small fw-bold text-dark mb-0">Qty:</label>
+                        <input type="number" id="modalProductQty" class="form-control text-center" value="1" min="1" style="width: 70px; border-radius: 8px;">
+                        <input type="hidden" id="modalProductID">
+                        <button onclick="addProductFromModal()" class="btn btn-forest"><i class="bi bi-cart-plus me-1"></i> Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
