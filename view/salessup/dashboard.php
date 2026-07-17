@@ -3,7 +3,7 @@ session_start();
 
 require_once '../../model/config/database.php';
 
-// STRICT AUTHENTICATION GUARD (Preserved exactly as requested)[cite: 14]
+// STRICT AUTHENTICATION GUARD (Preserved exactly as requested)
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'salessup') {
     header("Location: ../auth/login.php");
     exit;
@@ -67,6 +67,8 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
     <title>Sales Supervisor Dashboard - Tharu Systems</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -135,7 +137,7 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
                 <div class="stat-card-dark shadow-sm h-100">
                     <span class="text-white-50 small text-uppercase">Total Processed Orders</span>
                     <div class="metric-value mt-1"><?php echo htmlspecialchars($totalOrders); ?></div>
-                    <span class="text-success small fw-bold">▲ Live</span> <span class="text-white-50 small">database metric</span>
+                    <span class="text-success small fw-bold"><i class="bi bi-caret-up-fill"></i> Live</span> <span class="text-white-50 small">database metric</span>
                 </div>
             </div>
             
@@ -143,7 +145,7 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Pending Orders</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($pendingOrders); ?></div>
-                    <span class="text-warning small fw-bold">▶ Active</span> <span class="text-muted small">awaiting processing</span>
+                    <span class="text-warning small fw-bold"><i class="bi bi-caret-right-fill"></i> Active</span> <span class="text-muted small">awaiting processing</span>
                 </div>
             </div>
 
@@ -151,7 +153,7 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Monthly Income</span>
                     <div class="metric-value mt-1 text-success">LKR <?php echo number_format($monthlyIncome, 2); ?></div>
-                    <span class="text-success small fw-bold">✓ Net Flow</span>
+                    <span class="text-success small fw-bold"><i class="bi bi-check-circle"></i> Net Flow</span>
                 </div>
             </div>
 
@@ -159,7 +161,7 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Processing Orders</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($processingOrders); ?></div>
-                    <span class="text-info small fw-bold">⚙ UI Mock</span>
+                    <span class="text-info small fw-bold"><i class="bi bi-gear"></i> UI Mock</span>
                 </div>
             </div>
 
@@ -167,7 +169,7 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Dispatched Orders</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($dispatchedOrders); ?></div>
-                    <span class="text-info small fw-bold">⚙ UI Mock</span>
+                    <span class="text-info small fw-bold"><i class="bi bi-gear"></i> UI Mock</span>
                 </div>
             </div>
 
@@ -175,7 +177,7 @@ $chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyI
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Sold Units (Dispatched)</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($soldUnits); ?></div>
-                    <span class="text-info small fw-bold">⚙ UI Mock</span>
+                    <span class="text-info small fw-bold"><i class="bi bi-gear"></i> UI Mock</span>
                 </div>
             </div>
         </div>

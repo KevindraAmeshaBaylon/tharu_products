@@ -78,6 +78,8 @@ $conn->close();
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
         /* Reused specific styles for the light dashboard theme */
@@ -173,7 +175,7 @@ $conn->close();
                 <h3 class="fw-bold text-dark mb-1">Monthly Sales Report</h3>
                 <span class="text-muted small no-print">Generate and print operational sales statistics</span>
             </div>
-            <button onclick="window.print()" class="btn btn-forest px-4 no-print">🖨️ Print Report</button>
+            <button onclick="window.print()" class="btn btn-forest px-4 no-print"><i class="bi bi-printer"></i> Print Report</button>
         </div>
 
         <!-- Very Simple Form to Select Month -->

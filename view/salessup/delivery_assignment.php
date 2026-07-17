@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver'])) {
 }
 
 // 2. Fetch Available Drivers
-// A driver is available if they DO NOT have any active (undelivered & uncancelled) orders assigned to them[cite: 11].
+// A driver is available if they DO NOT have any active (undelivered & uncancelled) orders assigned to them.
 $availableDrivers = [];
 $driverSql = "SELECT driverID, drivername FROM Driver_tbl 
               WHERE driverID NOT IN (
@@ -40,7 +40,7 @@ if ($driverResult && $driverResult->num_rows > 0) {
 }
 
 // 3. Fetch Dispatched Orders Needing a Driver
-// Orders where batch is dispatched, but no driver is assigned yet[cite: 11]
+// Orders where batch is dispatched, but no driver is assigned yet
 $unassignedOrders = [];
 $unassignedSql = "SELECT DISTINCT o.orderID, o.date, c.companyname, c.address 
                   FROM Order_tbl o
@@ -83,6 +83,8 @@ $conn->close();
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
         /* Reused specific styles for the light dashboard theme */
@@ -193,7 +195,7 @@ $conn->close();
                                         <td>
                                             <!-- Button to trigger the assignment modal -->
                                             <button class="btn btn-sm btn-forest px-3" onclick="openAssignForm('<?php echo $order['orderID']; ?>', '<?php echo htmlspecialchars(addslashes($order['companyname'])); ?>')" <?php echo empty($availableDrivers) ? 'disabled title="No drivers available"' : ''; ?>>
-                                                🚚 Assign Delivery
+                                                <i class="bi bi-truck"></i> Assign Delivery
                                             </button>
                                         </td>
                                     </tr>
@@ -225,7 +227,7 @@ $conn->close();
                                     <tr>
                                         <td><span class="font-monospace text-muted fw-bold">#ORD-<?php echo $transit['orderID']; ?></span></td>
                                         <td class="fw-bold text-dark"><?php echo htmlspecialchars($transit['companyname']); ?></td>
-                                        <td class="text-muted">🚛 <?php echo htmlspecialchars($transit['drivername']); ?></td>
+                                        <td class="text-muted"><i class="bi bi-truck-flatbed"></i> <?php echo htmlspecialchars($transit['drivername']); ?></td>
                                         <td><span class="badge-transit">In Transit</span></td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -257,7 +259,7 @@ $conn->close();
                             <?php endforeach; ?>
                         <?php else: ?>
                             <li class="list-group-item px-0 py-4 text-center text-muted border-0">
-                                🚐 All fleet drivers are currently occupied with deliveries.
+                                <i class="bi bi-bus-front"></i> All fleet drivers are currently occupied with deliveries.
                             </li>
                         <?php endif; ?>
                     </ul>

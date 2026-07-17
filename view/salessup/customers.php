@@ -57,6 +57,8 @@ $conn->close();
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
         /* Specific styles for the customer page */
@@ -169,7 +171,7 @@ $conn->close();
                                     '<?php echo htmlspecialchars(addslashes($row['customerNIC'])); ?>', 
                                     '<?php echo htmlspecialchars(addslashes($row['companyname'])); ?>', 
                                     '<?php echo htmlspecialchars(addslashes($row['address'])); ?>'
-                                )">✏️ Edit</button>
+                                )"><i class="bi bi-pencil-square"></i> Edit</button>
                             </td>
                         </tr>
                         <?php 
@@ -219,7 +221,7 @@ $conn->close();
                                     '<?php echo htmlspecialchars(addslashes($inq['message'])); ?>', 
                                     '<?php echo htmlspecialchars(addslashes($inq['response'] ?? '')); ?>'
                                 )">
-                                    <?php echo $inq['pending'] == 1 ? '✉️ Respond' : '👁️ View / Edit'; ?>
+                                    <?php echo $inq['pending'] == 1 ? '<i class="bi bi-envelope"></i> Respond' : '<i class="bi bi-eye"></i> View / Edit'; ?>
                                 </button>
                             </td>
                         </tr>
