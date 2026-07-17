@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $dashboardFile = 'acc_dashboard.php';
                         break;
                     case 'salessup':
-                        $dashboardFile = 'salessup_dashboard.php';
+                        $dashboardFile = 'salessup/dashboard.php';
                         break;
                     case 'worker':
                         $dashboardFile = 'worker_dashboard.php';
@@ -304,6 +304,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 </style>
 
 <div class="d-flex flex-column align-items-center justify-content-center w-100">
+    <div class="w-100" style="max-width: 100px; display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <a href="../index.php" class="btn btn-sm btn-outline-light" style="backdrop-filter: blur(12px); background: rgba(255,255,255,0.18); border: 1px solid rgba(255, 255, 255, 0.27); color: #072c13; border-radius: 999px; padding: 10px 16px; font-weight: 600; text-decoration: none; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+            <i class="bi bi-house-door-fill me-2"></i>Home
+        </a>
+    </div>
     
     <!-- Notifications -->
     <?php if(!empty($error_message)): ?>

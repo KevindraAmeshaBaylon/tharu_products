@@ -49,16 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
 <style>
     :root {
-        --forest-brand: #059669; /* Richer green for better contrast on light bg */
-        --deep-forest: #022c22;  /* Used for dark elements like header and footer */
-        --mint-highlight: #10b981;
-        --glass-panel-bg: rgba(255, 255, 255, 0.75); /* Clean frosted white glass */
-        --glass-border: rgba(5, 150, 105, 0.18);
-        --text-dark: #0f172a;    /* High contrast near-black for body text */
-        --text-muted: #475569;   /* Readable gray for descriptions */
+        --forest-brand: #0f766e;
+        --deep-forest: #052e2b;
+        --mint-highlight: #6ee7b7;
+        --glass-panel-bg: rgba(255, 255, 255, 0.62);
+        --glass-border: rgba(15, 118, 110, 0.22);
+        --text-dark: #0f172a;
+        --text-muted: #475569;
         --font-primary: 'Plus Jakarta Sans', sans-serif;
         --font-mono: 'Space Grotesk', sans-serif;
     }
@@ -68,12 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     body {
-        /* Premium, bright, clean light-mint gradient background */
-        background-color: #f4fbf7;
-        background-image: 
-            radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
-            radial-gradient(circle at 90% 80%, rgba(5, 150, 105, 0.04) 0%, transparent 50%),
-            linear-gradient(180deg, #f4fbf7 0%, #eaf5f0 100%);
+        background-color: #f5fef9;
+        background-image:
+            radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 42%),
+            radial-gradient(circle at 90% 80%, rgba(6, 95, 70, 0.06) 0%, transparent 48%),
+            linear-gradient(135deg, #f7fff9 0%, #edf9f2 38%, #e2f7ed 100%);
         background-attachment: fixed;
         color: var(--text-dark);
         font-family: var(--font-primary);
@@ -109,7 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         opacity: 1;
     }
 
-    /* Ensures high visibility inside the dark green header */
+    .scroll-navbar .navbar-collapse {
+        justify-content: flex-end;
+    }
+
     .scroll-navbar .navbar-brand span {
         color: #ffffff !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -127,14 +130,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     /* 2. FROSTED GLASS PANELS ON LIGHT BG */
     .glass-panel {
-        background: var(--glass-panel-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid var(--glass-border);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(240, 253, 244, 0.35)) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
         border-radius: 24px;
-        box-shadow: 
-            0 10px 30px rgba(2, 44, 34, 0.04),
-            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        box-shadow:
+            0 16px 40px rgba(2, 44, 34, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
         transition: all 0.3s ease;
     }
     
@@ -151,12 +154,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     .hero-container {
         padding: 9rem 0 6rem 0;
         background: transparent;
+        position: relative;
+        overflow: hidden;
+        border-bottom-left-radius: 32px;
+        border-bottom-right-radius: 32px;
+    }
+
+    .hero-container .container {
+        position: relative;
+        z-index: 1;
     }
     
     .hero-badge {
         font-family: var(--font-mono);
         letter-spacing: 2px;
-        background: rgba(5, 150, 105, 0.1);
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(110, 231, 183, 0.2));
         color: var(--forest-brand);
         border: 1px solid rgba(5, 150, 105, 0.2);
         padding: 8px 16px;
@@ -164,6 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         font-size: 0.75rem;
         display: inline-block;
         font-weight: 700;
+        backdrop-filter: blur(10px);
     }
     
     .hero-title {
@@ -172,66 +185,138 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         line-height: 1.15;
         letter-spacing: -2px;
         color: var(--deep-forest);
+        text-shadow: 0 2px 12px rgba(2, 44, 34, 0.08);
+    }
+
+    .hero-container .lead {
+        color: var(--text-muted) !important;
+    }
+
+    .glass-btn {
+        border: 1px solid rgba(5, 150, 105, 0.2);
+        background: linear-gradient(135deg, rgba(255,255,255,0.78), rgba(236,253,245,0.7));
+        color: var(--forest-brand);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 12px 24px rgba(2, 44, 34, 0.10);
+        border-radius: 999px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    }
+
+    .glass-btn:hover {
+        background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(220,252,231,0.9));
+        color: var(--deep-forest);
+        transform: translateY(-1px);
+        box-shadow: 0 16px 30px rgba(2, 44, 34, 0.14);
+    }
+
+    .footer-contact-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    @media (max-width: 767.98px) {
+        .footer-contact-col {
+            align-items: center;
+            text-align: center;
+        }
     }
 
     /* DYNAMIC INTERACTION BUTTONS */
     .btn-forest {
-        background: var(--forest-brand);
-        color: #ffffff !important;
-        font-weight: 700;
-        border-radius: 12px;
-        padding: 10px 24px;
-        border: none;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.2);
+        background: rgba(52, 211, 153, 0.25) !important;
+        backdrop-filter: blur(12px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+        border: 2px solid rgba(52, 211, 153, 0.6) !important;
+        color: #064e3b !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        padding: 10px 24px !important;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow: 0 8px 32px 0 rgba(16, 185, 129, 0.15) !important;
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.4) !important;
     }
     
     .btn-forest:hover {
-        background: var(--deep-forest);
-        box-shadow: 0 8px 25px rgba(2, 44, 34, 0.3);
-        transform: translateY(-2px);
+        background: rgba(52, 211, 153, 0.45) !important;
+        border-color: rgba(52, 211, 153, 0.9) !important;
+        color: #022c22 !important;
+        box-shadow: 0 12px 40px 0 rgba(16, 185, 129, 0.25) !important;
+        transform: translateY(-2px) !important;
+    }
+
+    .btn-forest:active {
+        background: rgba(52, 211, 153, 0.6) !important;
+        transform: scale(0.96) translateY(-1px) !important;
+        box-shadow: 0 4px 16px 0 rgba(16, 185, 129, 0.2) !important;
+    }
+
+    /* SPECIFIC RULES FOR BUTTONS INSIDE DARK NAVBAR */
+    .scroll-navbar .btn-forest {
+        color: #ffffff !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+        border-color: rgba(52, 211, 153, 0.8) !important;
+        background: rgba(52, 211, 153, 0.3) !important;
+    }
+    
+    .scroll-navbar .btn-forest:hover {
+        color: #ffffff !important;
+        background: rgba(52, 211, 153, 0.5) !important;
+        border-color: #34d399 !important;
     }
 
     /* FILTER PILLS */
     .category-pill {
-        border: 1px solid var(--glass-border);
-        background: rgba(255, 255, 255, 0.7);
-        color: var(--text-muted);
-        padding: 0.5rem 1.25rem;
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
+        background: rgba(255, 255, 255, 0.35) !important;
+        color: var(--text-dark) !important;
+        padding: 0.55rem 1.2rem;
         border-radius: 50px;
         font-size: 0.85rem;
         cursor: pointer;
         transition: all 0.2s ease;
         font-family: var(--font-mono);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 18px rgba(2, 44, 34, 0.06);
     }
     
     .category-pill.active, .category-pill:hover {
-        background: var(--forest-brand);
-        color: #ffffff;
-        border-color: var(--forest-brand);
+        background: rgba(16, 185, 129, 0.75) !important;
+        color: #ffffff !important;
+        border-color: rgba(16, 185, 129, 0.9) !important;
         font-weight: bold;
+        box-shadow: 0 10px 24px rgba(16, 185, 129, 0.3) !important;
     }
 
     /* PRODUCT CATALOG CARDS */
     .menu-card {
-        background: var(--glass-panel-bg);
-        border: 1px solid var(--glass-border);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(229, 248, 238, 0.35)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
         border-radius: 24px;
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        box-shadow: 0 8px 25px rgba(2, 44, 34, 0.03);
+        box-shadow: 
+            0 8px 32px 0 rgba(15, 118, 110, 0.08),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
     }
     
     .menu-card:hover {
         transform: translateY(-8px);
-        border-color: var(--forest-brand);
-        box-shadow: 0 15px 35px rgba(5, 150, 105, 0.12);
+        border-color: rgba(52, 211, 153, 0.8) !important;
+        box-shadow: 
+            0 16px 38px rgba(5, 150, 105, 0.16),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.9) !important;
     }
     
     .product-img-holder {
         height: 180px;
-        background: rgba(234, 245, 240, 0.6);
+        background: rgba(255, 255, 255, 0.3) !important;
         border-radius: 18px;
-        border: 1px dashed var(--glass-border);
+        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .feature-icon-wrapper {
@@ -240,11 +325,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(5, 150, 105, 0.08);
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.14), rgba(110, 231, 183, 0.16));
         border: 1px solid var(--glass-border);
         border-radius: 18px;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         margin: 0 auto 1.25rem auto;
+        color: var(--forest-brand);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    .icon-glass-btn {
+        width: 2.1rem;
+        height: 2.1rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(5, 150, 105, 0.16);
+        background: linear-gradient(135deg, rgba(255,255,255,0.86), rgba(236,253,245,0.82));
+        color: var(--forest-brand);
+        box-shadow: 0 8px 20px rgba(2, 44, 34, 0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .icon-glass-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(2, 44, 34, 0.12);
     }
 
     .sticky-cart-card {
@@ -283,13 +389,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navContent">
-            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-3">
+        <div class="collapse navbar-collapse justify-content-end" id="navContent">
+            <ul class="navbar-nav mb-2 mb-lg-0 gap-3 align-items-center me-3">
                 <li class="nav-item"><a class="nav-link" href="#menu-catalog">Menu</a></li>
                 <li class="nav-item"><a class="nav-link" href="#about-section">About Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="#contact-section">Contact Us</a></li>
             </ul>
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center">
                 <a href="auth/login.php" class="btn btn-sm btn-forest px-3">Sign In</a>
             </div>
         </div>
@@ -302,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="row align-items-center g-5">
             <div class="col-12 col-md-6">
                 
-                <span class="hero-badge mb-3">SYSTEM PROTOCOL DEPLOYED</span>
+                <span class="hero-badge mb-3">WELCOME TO THARU & PRODUCTS</span>
                 <h1 class="hero-title mt-2 mb-3">Premium Quality Animal Feed</h1>
                 <p class="lead mb-4" style="color: var(--text-muted);">Optimizing agricultural yields with modern automated silo processing and verifiable feed distribution chains.</p>
                 <a href="#menu-catalog" class="btn btn-forest px-4 py-3 shadow">Order Online Now</a>
@@ -324,21 +430,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="row g-4 mt-2">
             <div class="col-12 col-md-4">
                 <div class="glass-panel p-4 h-100">
-                    <div class="feature-icon-wrapper">🌱</div>
+                    <div class="feature-icon-wrapper"><i class="bi bi-flower1"></i></div>
                     <h5 class="fw-bold">Always Fresh Ingredients</h5>
                     <p class="mb-0">Strict raw silo evaluations ensure batch quality remains consistent across operations.</p>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="glass-panel p-4 h-100">
-                    <div class="feature-icon-wrapper">📲</div>
+                    <div class="feature-icon-wrapper"><i class="bi bi-cart3"></i></div>
                     <h5 class="fw-bold">Easy Online Orders</h5>
                     <p class="mb-0">Registered corporate clients secure output batch allocations with real-time checkout pipelines.</p>
                 </div>
             </div>
             <div class="col-12 col-md-4">
                 <div class="glass-panel p-4 h-100">
-                    <div class="feature-icon-wrapper">📋</div>
+                    <div class="feature-icon-wrapper"><i class="bi bi-list-check"></i></div>
                     <h5 class="fw-bold">Plenty to Choose From</h5>
                     <p class="mb-0">Our processing units handle mixed grain matrix ratios specialized for diverse livestock portfolios.</p>
                 </div>
@@ -354,7 +460,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <h2 class="fw-bold mb-3" style="letter-spacing: -0.5px;">About Us</h2>
                     <div style="width: 60px; height: 3px; background-color: var(--forest-brand); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
                     <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted) !important;">
-                        Welcome to <strong class="text-dark">Tharu Products</strong>. We are dedicated to pioneering the next generation of agricultural excellence by manufacturing and distributing premium, high-nutrition animal feed.
+                        Welcome to <strong class="text-dark">Tharu Products</strong>. <br>
+                        We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms with reliability and excellence.<br>
+
+                        With years of industry experience, we source quality raw materials from trusted suppliers and transform them into carefully formulated animal feed that meets the nutritional needs of livestock. Our focus is on maintaining consistent quality, ensuring timely deliveries, and building long-term partnerships with our customers.
+
+                        Driven by innovation, our business embraces modern technology to streamline operations, improve inventory management, and enhance customer service. <br>Through our web-based platform, we aim to provide a seamless experience where customers can explore our products, place orders, and stay connected with us more efficiently than ever before.
+
+                        <br>Our mission is simple: <strong class="text-dark">to empower the agricultural industry by providing dependable, high-quality animal feed solutions that promote healthier animals and stronger farming communities.</strong>.
                     </p>
                 </div>
             </div>
@@ -367,7 +480,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <!-- Left Sticky Cart -->
             <div class="col-12 col-lg-4">
                 <div class="glass-panel p-4 sticky-cart-card">
-                    <h5 class="fw-bold border-bottom pb-3 mb-3" style="font-family: var(--font-mono);">🛒 Your Cart</h5>
+                    <h5 class="fw-bold border-bottom pb-3 mb-3" style="font-family: var(--font-mono);"><i class="bi bi-cart3 me-2"></i>Your Cart</h5>
                     <?php if (empty($_SESSION['cart'])): ?>
                         <p class="mb-0 py-2">Your Cart is empty. Select product variants to populate.</p>
                     <?php else: ?>
@@ -391,8 +504,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                         <span class="small text-success" style="font-family: var(--font-mono);">LKR <?= number_format($itemPrice, 2) ?> × <?= $quantity ?></span>
                                     </div>
                                     <div class="d-flex align-items-center gap-1">
-                                        <button onclick="decreaseQty(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-warning border-0 p-1 px-2" title="Decrease by 1">➖</button>
-                                        <button onclick="removeItem(<?= $cartItemID ?>)" class="btn btn-sm btn-outline-danger border-0 p-1" title="Remove completely">🗑️</button>
+                                        <button onclick="decreaseQty(<?= $cartItemID ?>)" class="icon-glass-btn btn btn-sm p-0" title="Decrease by 1"><i class="bi bi-dash"></i></button>
+                                        <button onclick="removeItem(<?= $cartItemID ?>)" class="icon-glass-btn btn btn-sm p-0" title="Remove completely"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -420,9 +533,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         <span class="small fw-bold text-dark me-2" style="font-family: var(--font-mono); letter-spacing: 1px;">FILTER:</span>
                         <button class="category-pill active" onclick="filterCategory('all', event)">All Products</button>
-                        <button class="category-pill" onclick="filterCategory('poultry', event)">Poultry Feed</button>
+                        <button class="category-pill" onclick="filterCategory('chicken', event)">Poultry Feed</button>
                         <button class="category-pill" onclick="filterCategory('pig', event)">Pig Feed</button>
-                        <button class="category-pill" onclick="filterCategory('cattle', event)">Cattle Mash</button>
+                        <button class="category-pill" onclick="filterCategory('cow', event)">Cattle Mash</button>
                     </div>
                 </div>
 
@@ -432,8 +545,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             <div class="col-12 col-sm-6 product-card-wrapper" data-category="<?= strtolower(htmlspecialchars($prod['type'] ?? 'all')) ?>">
                                 <div class="menu-card p-3 d-flex flex-column justify-content-between h-100">
                                     <div>
-                                        <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center text-muted">
-                                            <span class="display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15));">🌾</span>
+                                        <?php
+                                        $imgSrc = 'images/LOGO.png';
+                                        $lowercaseName = strtolower($prod['name']);
+                                        $lowercaseType = strtolower($prod['type'] ?? '');
+                                        $hasImage = false;
+                                        if (strpos($lowercaseName, 'chicken') !== false || strpos($lowercaseType, 'chicken') !== false || strpos($lowercaseType, 'poultry') !== false) {
+                                            $imgSrc = 'images/chickenfeed.jpg';
+                                            $hasImage = true;
+                                        } elseif (strpos($lowercaseName, 'pig') !== false || strpos($lowercaseType, 'pig') !== false) {
+                                            $imgSrc = 'images/pigfeed.jpg';
+                                            $hasImage = true;
+                                        } elseif (strpos($lowercaseName, 'cow') !== false || strpos($lowercaseName, 'cattle') !== false || strpos($lowercaseType, 'cow') !== false || strpos($lowercaseType, 'cattle') !== false || strpos($lowercaseName, 'mash') !== false) {
+                                            $imgSrc = 'images/cowfeed.png';
+                                            $hasImage = true;
+                                        }
+                                        ?>
+                                        <div class="product-img-holder rounded mb-3 d-flex align-items-center justify-content-center overflow-hidden">
+                                            <?php if ($hasImage): ?>
+                                                <img src="<?= $imgSrc ?>" alt="<?= htmlspecialchars($prod['name']) ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;" class="product-card-img">
+                                            <?php else: ?>
+                                                <i class="bi bi-flower2 display-3" style="filter: drop-shadow(0 4px 10px rgba(5, 150, 105, 0.15)); color: var(--forest-brand);"></i>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <h6 class="fw-bold text-dark mb-0"><?= htmlspecialchars($prod['name']) ?></h6>
@@ -445,7 +578,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mt-3 pt-3" style="border-top: 1px solid rgba(5, 150, 105, 0.15);">
                                         <span class="fw-bold fs-5 text-dark" style="font-family: var(--font-mono);">LKR <?= number_format($prod['unitprice'], 2) ?></span>
-                                        <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest">+ Add Item</button>
+                                        <button onclick="addUnit(<?= $prod['productID'] ?>)" class="btn btn-sm btn-forest"><i class="bi bi-plus-lg me-1"></i>Add Item</button>
                                     </div>
                                 </div>
                             </div>
@@ -475,17 +608,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             </div>
 
             <!-- Contact Information Pane (Highly Visible Text) -->
-            <div class="col-12 col-md-4 text-right">
+            <div class="col-12 col-md-4 footer-contact-col">
                 <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
-                <p class="small mb-1">📍 128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
-                <p class="small mb-1">✉️ support@tharufeedproducts.com</p>
-                <p class="small mb-0">📞 +94 11 2345 678</p>
+                <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>128/A, Feed Mill Complex, Colombo, Sri Lanka</p>
+                <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>support@tharufeedproducts.com</p>
+                <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 11 2345 678</p>
             </div>
 
             <!-- Portal Shortcuts -->
-            <div class="col-12 col-md-4 text-center text-md-end">
-                <a href="#landing-scroll-nav" class="btn btn-sm btn-outline-light px-3 me-2 mb-2" style="border-radius: 10px;">Back to Top</a>
-                <a href="auth/login.php" class="btn btn-sm btn-forest px-3 mb-2">Management Portal Login</a>
+            <div class="col-12 col-md-4 d-flex justify-content-center">
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <a href="#" id="backToTopBtn" onclick="scrollToTop(); return false;" class="btn btn-sm px-3 mb-2 glass-btn">Back to Top</a>
+                    <a href="auth/login.php" class="btn btn-sm px-3 mb-2 glass-btn">Management Portal Login</a>
+                </div>
             </div>
         </div>
     </div>
@@ -503,6 +638,10 @@ window.addEventListener('scroll', function() {
         }
     }
 });
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function filterCategory(category, event) {
     const pills = document.querySelectorAll('.category-pill');
@@ -563,4 +702,136 @@ function decreaseQty(productId) {
         }
     });
 }
+
+// --- Interactive Particle Background Animation inspired by Google Antigravity ---
+class AntigravityEffect {
+    constructor() {
+        this.canvas = document.createElement('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.style.position = 'fixed';
+        this.canvas.style.top = '0';
+        this.canvas.style.left = '0';
+        this.canvas.style.width = '100vw';
+        this.canvas.style.height = '100vh';
+        this.canvas.style.pointerEvents = 'none';
+        this.canvas.style.zIndex = '-1'; // Behind content, above body gradient
+        document.body.appendChild(this.canvas);
+        
+        this.particles = [];
+        this.mouse = { x: null, y: null, active: false, radius: 150 };
+        this.colors = [
+            'rgba(16, 185, 129, 0.45)',  // Emerald Green
+            'rgba(52, 211, 153, 0.45)',  // Mint Green
+            'rgba(59, 130, 246, 0.45)',  // Electric Blue
+            'rgba(139, 92, 246, 0.4)',   // Bright Purple
+            'rgba(245, 158, 11, 0.4)',   // Amber Gold
+            'rgba(239, 68, 68, 0.4)'     // Rose Red
+        ];
+        
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        window.addEventListener('mouseout', () => this.handleMouseOut());
+        
+        this.initAmbientParticles(80);
+        this.animate();
+    }
+    
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+    
+    handleMouseMove(e) {
+        this.mouse.x = e.clientX;
+        this.mouse.y = e.clientY;
+        this.mouse.active = true;
+        
+        // Spawn active trail particles
+        if (Math.random() < 0.5) {
+            this.spawnParticle(e.clientX, e.clientY, true);
+        }
+    }
+    
+    handleMouseOut() {
+        this.mouse.active = false;
+        this.mouse.x = null;
+        this.mouse.y = null;
+    }
+    
+    spawnParticle(x, y, isTrail = false) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = isTrail ? Math.random() * 2.5 + 0.5 : Math.random() * 0.6 + 0.2;
+        const color = this.colors[Math.floor(Math.random() * this.colors.length)];
+        this.particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - (isTrail ? 0.3 : 0.1), // upward drift
+            size: Math.random() * (isTrail ? 3.5 : 2.5) + 1.2,
+            color: color,
+            alpha: 1,
+            decay: isTrail ? 0.015 : 0.006,
+            isTrail: isTrail
+        });
+    }
+    
+    initAmbientParticles(count) {
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * this.canvas.width;
+            const y = Math.random() * this.canvas.height;
+            this.spawnParticle(x, y, false);
+        }
+    }
+    
+    animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Maintain ambient particles
+        if (this.particles.filter(p => !p.isTrail).length < 60) {
+            this.spawnParticle(Math.random() * this.canvas.width, this.canvas.height + 10, false);
+        }
+        
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            
+            // Antigravity cursor interaction (repel)
+            if (this.mouse.active && this.mouse.x !== null) {
+                const dx = p.x - this.mouse.x;
+                const dy = p.y - this.mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < this.mouse.radius) {
+                    const force = (this.mouse.radius - dist) / this.mouse.radius;
+                    p.vx += (dx / dist) * force * 0.5;
+                    p.vy += (dy / dist) * force * 0.5;
+                }
+            }
+            
+            p.x += p.vx;
+            p.y += p.vy;
+            
+            p.vx *= 0.97;
+            p.vy *= 0.97;
+            
+            p.alpha -= p.decay;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = p.alpha;
+            this.ctx.fillStyle = p.color;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+            
+            if (p.alpha <= 0 || p.x < -10 || p.x > this.canvas.width + 10 || p.y < -10 || p.y > this.canvas.height + 10) {
+                this.particles.splice(i, 1);
+            }
+        }
+        
+        requestAnimationFrame(() => this.animate());
+    }
+}
+window.addEventListener('DOMContentLoaded', () => {
+    new AntigravityEffect();
+});
 </script>
