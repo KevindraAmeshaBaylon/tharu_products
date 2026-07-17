@@ -15,6 +15,61 @@ require_once __DIR__ . '/../model/config/database.php';
 
 $conn=getDBConnection(); // Assuming getDBConnection() returns a PDO or mysqli connection
 
+// --- AJAX Salary Details Endpoint ---
+if (isset($_GET['ajax_action']) && $_GET['ajax_action'] === 'get_salary_details') {
+    header('Content-Type: application/json');
+    $emp_id = intval($_GET['employee_id'] ?? 0);
+    $month = trim($_GET['month'] ?? date('Y-m'));
+    if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+        $month = date('Y-m');
+    }
+    
+    // Fetch accountant details
+    $acc_stmt = $conn->prepare("SELECT accountantID, base_salary, OT_rate FROM accountant_tbl WHERE userID = ? LIMIT 1");
+    if ($acc_stmt) {
+        $acc_stmt->bind_param("i", $emp_id);
+        $acc_stmt->execute();
+        $acc = $acc_stmt->get_result()->fetch_assoc();
+        
+        if ($acc) {
+            $accountant_id = (int)$acc['accountantID'];
+            $base_salary = (float)$acc['base_salary'];
+            
+            // Sum up OT amounts for the selected month from salary_tbl, ignoring records where totamtpaid >= base_salary
+            $sal_stmt = $conn->prepare("SELECT totamtpaid FROM salary_tbl WHERE accountantID = ? AND DATE_FORMAT(paydate, '%Y-%m') = ?");
+            if ($sal_stmt) {
+                $sal_stmt->bind_param("is", $accountant_id, $month);
+                $sal_stmt->execute();
+                $sal_res = $sal_stmt->get_result();
+                $sum_ot = 0;
+                $ot_records_count = 0;
+                while ($s_row = $sal_res->fetch_assoc()) {
+                    $amt = (float)$s_row['totamtpaid'];
+                    if ($amt >= $base_salary) {
+                        continue;
+                    }
+                    $sum_ot += $amt;
+                    $ot_records_count++;
+                }
+                echo json_encode([
+                    'status' => 'success',
+                    'base_salary' => $base_salary,
+                    'ot_rate' => (float)$acc['OT_rate'],
+                    'sum_ot' => $sum_ot,
+                    'ot_records_count' => $ot_records_count
+                ]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Query preparation failed.']);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Accountant profile not found for this user.']);
+        }
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Statement preparation failed.']);
+    }
+    exit;
+}
+
 // 🔌 Dynamic Global Header File Included
 include_once __DIR__ . '/../includes/header.php'; 
 
@@ -44,42 +99,94 @@ if (!in_array($download_format, ['pdf', 'xlsx', 'png', 'jpeg'], true)) {
     $download_format = 'pdf';
 }
 $auto_download_format = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'authorize_salary') {
-    $emp_id = intval($_POST['employee_id'] ?? 0);
-    $base_pay = floatval($_POST['base_pay'] ?? 0);
-    $ot_pay = floatval($_POST['ot_pay'] ?? 0);
-    $bonus_pay = floatval($_POST['bonus_pay'] ?? 0);
-    $total_payout = $base_pay + $ot_pay + $bonus_pay;
-    $attendance_id = intval($_POST['attendance_id'] ?? 0);
-    $accountant_id = null;
 
-    $accountantLookup = $conn->prepare('SELECT accountantID FROM accountant_tbl WHERE userID = ? LIMIT 1');
-    if ($accountantLookup) {
-        $accountantLookup->bind_param('i', $emp_id);
-        $accountantLookup->execute();
-        $accountantRow = $accountantLookup->get_result()->fetch_assoc();
-        if ($accountantRow) {
-            $accountant_id = (int)($accountantRow['accountantID'] ?? 0);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'record_ot_amount') {
+        $emp_id = intval($_POST['employee_id'] ?? 0);
+        $ot_pay = floatval($_POST['ot_pay'] ?? 0);
+        $attendance_id = intval($_POST['attendance_id'] ?? 0);
+        $accountant_id = null;
+
+        $accountantLookup = $conn->prepare('SELECT accountantID FROM accountant_tbl WHERE userID = ? LIMIT 1');
+        if ($accountantLookup) {
+            $accountantLookup->bind_param('i', $emp_id);
+            $accountantLookup->execute();
+            $accountantRow = $accountantLookup->get_result()->fetch_assoc();
+            if ($accountantRow) {
+                $accountant_id = (int)$accountantRow['accountantID'];
+            }
         }
+
+        if ($accountant_id > 0 && $attendance_id > 0 && $ot_pay > 0) {
+            // Check if OT amount is already recorded for this attendance record
+            $check_stmt = $conn->prepare('SELECT salaryID FROM salary_tbl WHERE attendanceID = ? AND accountantID = ? AND totamtpaid = ?');
+            $check_stmt->bind_param('iid', $attendance_id, $accountant_id, $ot_pay);
+            $check_stmt->execute();
+            $check_res = $check_stmt->get_result();
+            if ($check_res->num_rows > 0) {
+                $salary_error_msg = 'This OT amount has already been recorded for this attendance record.';
+            } else {
+                $stmt = $conn->prepare('INSERT INTO salary_tbl (paydate, totamtpaid, attendanceID, accountantID) VALUES (CURDATE(), ?, ?, ?)');
+                if ($stmt) {
+                    $stmt->bind_param('dii', $ot_pay, $attendance_id, $accountant_id);
+                    if ($stmt->execute()) {
+                        $salary_success_msg = 'OT Amount recorded successfully in salary_tbl.';
+                    } else {
+                        $salary_error_msg = 'OT record write failed: ' . $stmt->error;
+                    }
+                    $stmt->close();
+                }
+            }
+        } else {
+            $salary_error_msg = 'Please choose a valid accountant, attendance record, and make sure OT pay is calculated.';
+        }
+        $active_tab = 'panel-salary';
     }
 
-    if ($accountant_id > 0 && $attendance_id > 0) {
-        $stmt = $conn->prepare('INSERT INTO salary_tbl (paydate, totamtpaid, attendanceID, accountantID) VALUES (CURDATE(), ?, ?, ?)');
-        if ($stmt) {
-            $stmt->bind_param('dii', $total_payout, $attendance_id, $accountant_id);
-            if ($stmt->execute()) {
-                $salary_success_msg = 'Payroll release successfully authorized and saved to salary_tbl.';
-                $active_tab = 'panel-salary';
-            } else {
-                $salary_error_msg = 'Ledger write execution failed: ' . $stmt->error;
-                $active_tab = 'panel-salary';
+    if ($_POST['action'] === 'record_total_salary') {
+        $emp_id = intval($_POST['employee_id'] ?? 0);
+        $total_salary = floatval($_POST['total_salary'] ?? 0);
+        $paydate = trim($_POST['paydate'] ?? date('Y-m-d'));
+        
+        // Find accountant_id and a valid attendanceID to satisfy FK constraint
+        $accountant_id = null;
+        $accountantLookup = $conn->prepare('SELECT accountantID FROM accountant_tbl WHERE userID = ? LIMIT 1');
+        if ($accountantLookup) {
+            $accountantLookup->bind_param('i', $emp_id);
+            $accountantLookup->execute();
+            $accountantRow = $accountantLookup->get_result()->fetch_assoc();
+            if ($accountantRow) {
+                $accountant_id = (int)$accountantRow['accountantID'];
             }
-            $stmt->close();
-        } else {
-            $salary_error_msg = 'Ledger statement preparation failed: ' . $conn->error;
         }
-    } else {
-        $salary_error_msg = 'Please choose a valid accountant and attendance record.';
+
+        $attendance_id = 0;
+        if ($accountant_id > 0) {
+            $attLookup = $conn->prepare('SELECT attendanceID FROM attendance_tbl WHERE accountantID = ? ORDER BY date DESC LIMIT 1');
+            if ($attLookup) {
+                $attLookup->bind_param('i', $accountant_id);
+                $attLookup->execute();
+                $attRow = $attLookup->get_result()->fetch_assoc();
+                if ($attRow) {
+                    $attendance_id = (int)$attRow['attendanceID'];
+                }
+            }
+        }
+
+        if ($accountant_id > 0 && $attendance_id > 0 && $total_salary > 0) {
+            $stmt = $conn->prepare('INSERT INTO salary_tbl (paydate, totamtpaid, attendanceID, accountantID) VALUES (?, ?, ?, ?)');
+            if ($stmt) {
+                $stmt->bind_param('sdii', $paydate, $total_salary, $attendance_id, $accountant_id);
+                if ($stmt->execute()) {
+                    $salary_success_msg = 'Final monthly salary recorded successfully along with pay date.';
+                } else {
+                    $salary_error_msg = 'Final salary write failed: ' . $stmt->error;
+                }
+                $stmt->close();
+            }
+        } else {
+            $salary_error_msg = 'Please choose a valid accountant. An attendance record for the accountant is required in the system.';
+        }
         $active_tab = 'panel-salary';
     }
 }
@@ -718,98 +825,137 @@ if ($generatedReportsQuery) {
                         </div>
                     <?php endif; ?>
 
-                    <form action="owner_dashboard.php?tab=panel-salary" method="POST" id="salaryForm">
-                        <input type="hidden" name="action" value="authorize_salary">
-                        <input type="hidden" name="tab" value="panel-salary">
-                        
-                        <div class="row g-3">
-                            <div class="col-md-12 mb-2">
-                                <label class="form-label small fw-bold text-dark">Target Employee Operator</label>
-                                <select class="form-select border" id="employeeSelect" name="employee_id" onchange="loadEmployeeData()" required>
-                                    <option value="">-- Choose Active Staff Member --</option>
-                                    <?php foreach ($staff_members as $member): ?>
-                                        <?php if ((int)($member['accountantID'] ?? 0) > 0): ?>
-                                            <option value="<?= (int)($member['id'] ?? 0) ?>"
-                                                    data-base-salary="<?= number_format((float)($member['base_salary'] ?? 0), 2, '.', '') ?>"
-                                                    data-ot-rate="<?= number_format((float)($member['ot_rate'] ?? 0), 2, '.', '') ?>">
-                                                <?= htmlspecialchars($member['username']) ?> (<?= htmlspecialchars($member['role'] ?? 'Staff') ?>)
-                                            </option>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-secondary">Attendance Record</label>
-                                <select class="form-select border" id="attendanceSelect" name="attendance_id" onchange="loadAttendanceData()" required>
-                                    <option value="">-- Choose Attendance Record --</option>
-                                    <?php foreach ($attendance_rows as $attendance): ?>
-                                        <option value="<?= (int)($attendance['attendanceID'] ?? 0) ?>"
-                                                data-login="<?= htmlspecialchars($attendance['login'] ?? '') ?>"
-                                                data-logout="<?= htmlspecialchars($attendance['logout'] ?? '') ?>"
-                                                data-date="<?= htmlspecialchars($attendance['date'] ?? '') ?>"
-                                                data-accountant="<?= htmlspecialchars($attendance['accountantname'] ?? '') ?>"
-                                                data-base-salary="<?= number_format((float)($attendance['base_salary'] ?? 0), 2, '.', '') ?>"
-                                                data-ot-rate="<?= number_format((float)($attendance['OT_rate'] ?? 0), 2, '.', '') ?>">
-                                            <?= htmlspecialchars($attendance['date'] ?? '') ?> | <?= htmlspecialchars($attendance['accountantname'] ?? '') ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-secondary">Login / Logout Times</label>
-                                <input type="text" id="attendanceSummary" class="form-control bg-light" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-secondary">Base Salary (LKR)</label>
-                                <input type="number" id="baseSalary" class="form-control bg-light" name="base_salary_display" value="0" readonly>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold text-secondary">OT Rate Per Hour (LKR)</label>
-                                <input type="number" id="displayOtRate" class="form-control bg-light" name="ot_rate_display" value="0" readonly>
-                            </div>
-
-                            <input type="hidden" id="basePayHidden" name="base_pay" value="0">
-
-                            <div class="col-12 my-3"><hr></div>
-
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">OT Hours Worked</label>
-                                <input type="number" id="otHours" class="form-control" value="0" step="0.01" oninput="calculateTotalSalary()" readonly>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">OT Rate Per Hour</label>
-                                <input type="number" id="otRateDisplay" class="form-control" value="0" step="0.01" oninput="calculateTotalSalary()" readonly>
-                            </div>
-
-                            <input type="hidden" id="otRateHidden" name="ot_rate" value="0">
-                            <input type="hidden" id="otPayHidden" name="ot_pay" value="0">
-
-                            <div class="col-12 my-3"><hr></div>
-
-                            <div class="col-12">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="bonusToggle" onclick="toggleBonusField()">
-                                    <label class="form-check-input-label fw-bold text-dark" for="bonusToggle">Apply Corporate Performance Bonus Milestone</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small text-muted">Bonus Payout (LKR)</label>
-                                <input type="number" id="bonusAmount" class="form-control" name="bonus_pay" value="0" disabled oninput="calculateTotalSalary()">
-                            </div>
-
-                            <div class="col-12 mt-4">
-                                <div class="p-4 rounded-3 text-start d-flex justify-content-between align-items-center" style="background-color: var(--mint-light);">
-                                    <div>
-                                        <h6 class="text-success fw-bold text-uppercase mb-1 small">Total Calculated Payroll Release</h6>
-                                        <div class="fs-2 fw-bold text-dark" id="displayTotalPayout">LKR 0.00</div>
+                    <div class="row g-4">
+                        <!-- SECTION 1: OVERTIME (OT) CALCULATOR -->
+                        <div class="col-lg-6">
+                            <div class="p-4 rounded-4 border bg-white shadow-sm h-100">
+                                <h5 class="fw-bold text-success mb-3"><i class="bi bi-clock-history me-2"></i>Calculate & Record OT Amount</h5>
+                                <form action="owner_dashboard.php?tab=panel-salary" method="POST">
+                                    <input type="hidden" name="action" value="record_ot_amount">
+                                    <input type="hidden" name="tab" value="panel-salary">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-dark">Target Employee Operator</label>
+                                        <select class="form-select border employeeSelectClass" id="employeeSelect" name="employee_id" onchange="syncEmployeeSelections(this.value); loadMonthlySalaryDetails();" required>
+                                            <option value="">-- Choose Active Staff Member --</option>
+                                            <?php foreach ($staff_members as $member): ?>
+                                                <?php if ((int)($member['accountantID'] ?? 0) > 0): ?>
+                                                    <option value="<?= (int)($member['id'] ?? 0) ?>"
+                                                            data-base-salary="<?= number_format((float)($member['base_salary'] ?? 0), 2, '.', '') ?>"
+                                                            data-ot-rate="<?= number_format((float)($member['ot_rate'] ?? 0), 2, '.', '') ?>">
+                                                        <?= htmlspecialchars($member['username']) ?> (<?= htmlspecialchars($member['role'] ?? 'Staff') ?>)
+                                                    </option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
-                                    <button type="submit" class="btn btn-success px-4 py-2 fw-bold rounded-pill shadow-sm">Authorize Payout Track</button>
-                                </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-secondary">Attendance Record</label>
+                                        <select class="form-select border" id="attendanceSelect" name="attendance_id" onchange="loadAttendanceData()" required>
+                                            <option value="">-- Choose Attendance Record --</option>
+                                            <?php foreach ($attendance_rows as $attendance): ?>
+                                                <option value="<?= (int)($attendance['attendanceID'] ?? 0) ?>"
+                                                        data-login="<?= htmlspecialchars($attendance['login'] ?? '') ?>"
+                                                        data-logout="<?= htmlspecialchars($attendance['logout'] ?? '') ?>"
+                                                        data-date="<?= htmlspecialchars($attendance['date'] ?? '') ?>"
+                                                        data-accountant-userid="<?= (int)($attendance['id'] ?? 0) ?>"
+                                                        data-accountant="<?= htmlspecialchars($attendance['accountantname'] ?? '') ?>"
+                                                        data-base-salary="<?= number_format((float)($attendance['base_salary'] ?? 0), 2, '.', '') ?>"
+                                                        data-ot-rate="<?= number_format((float)($attendance['OT_rate'] ?? 0), 2, '.', '') ?>">
+                                                    <?= htmlspecialchars($attendance['date'] ?? '') ?> | <?= htmlspecialchars($attendance['accountantname'] ?? '') ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-secondary">Login / Logout Times</label>
+                                        <input type="text" id="attendanceSummary" class="form-control bg-light" readonly>
+                                    </div>
+
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-muted">OT Rate Per Hour (LKR)</label>
+                                            <input type="number" id="displayOtRate" class="form-control bg-light" name="ot_rate_display" value="0" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-muted">OT Hours Worked</label>
+                                            <input type="number" id="otHours" class="form-control" name="ot_hours" value="0" step="0.01" oninput="calculateOtAmount()" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="p-3 rounded-3 text-start mb-3" style="background-color: var(--mint-light);">
+                                        <h6 class="text-success fw-bold text-uppercase mb-1 small">Calculated OT Amount</h6>
+                                        <div class="fs-4 fw-bold text-dark" id="displayOtAmount">LKR 0.00</div>
+                                        <input type="hidden" id="otPayHidden" name="ot_pay" value="0">
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill shadow-sm">Record OT Amount</button>
+                                </form>
                             </div>
                         </div>
-                    </form>
+
+                        <!-- SECTION 2: MONTHLY SALARY CALCULATOR -->
+                        <div class="col-lg-6">
+                            <div class="p-4 rounded-4 border bg-white shadow-sm h-100">
+                                <h5 class="fw-bold text-success mb-3"><i class="bi bi-calendar-check me-2"></i>Calculate & Record Monthly Salary</h5>
+                                <form action="owner_dashboard.php?tab=panel-salary" method="POST">
+                                    <input type="hidden" name="action" value="record_total_salary">
+                                    <input type="hidden" name="tab" value="panel-salary">
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-dark">Target Employee Operator</label>
+                                        <select class="form-select border employeeSelectClass" id="employeeSelectMonthly" name="employee_id" onchange="syncEmployeeSelections(this.value); loadMonthlySalaryDetails();" required>
+                                            <option value="">-- Choose Active Staff Member --</option>
+                                            <?php foreach ($staff_members as $member): ?>
+                                                <?php if ((int)($member['accountantID'] ?? 0) > 0): ?>
+                                                    <option value="<?= (int)($member['id'] ?? 0) ?>">
+                                                        <?= htmlspecialchars($member['username']) ?> (<?= htmlspecialchars($member['role'] ?? 'Staff') ?>)
+                                                    </option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold text-secondary">Choose Month</label>
+                                            <input type="month" id="salaryMonth" name="salary_month" class="form-control" value="<?= date('Y-m') ?>" onchange="loadMonthlySalaryDetails()" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold text-secondary">Pay Date</label>
+                                            <input type="date" name="paydate" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-muted">Base Salary (LKR)</label>
+                                            <input type="number" id="monthlyBaseSalary" class="form-control bg-light" value="0" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small text-muted">Total OT for Month (LKR)</label>
+                                            <input type="number" id="monthlyOtTotal" class="form-control bg-light" value="0" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted">Performance Bonus (LKR)</label>
+                                        <input type="number" id="monthlyBonus" class="form-control" name="bonus_pay" value="0" oninput="calculateMonthlyTotal()">
+                                    </div>
+
+                                    <div class="p-3 rounded-3 text-start mb-3" style="background-color: var(--mint-light);">
+                                        <h6 class="text-success fw-bold text-uppercase mb-1 small">Total Salary for Month</h6>
+                                        <div class="fs-3 fw-bold text-dark" id="displayMonthlyTotal">LKR 0.00</div>
+                                        <input type="hidden" id="monthlyTotalHidden" name="total_salary" value="0">
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold rounded-pill shadow-sm">Calculate & Record Monthly Salary</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -977,18 +1123,20 @@ if ($generatedReportsQuery) {
                                     <th>Log Key Identity</th>
                                     <th>Corporate Operator Identity</th>
                                     <th>Total Authorized Pay</th>
+                                    <th>Pay Date</th>
                                     <th>Settlement Status Matrix</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if(empty($payroll_history)): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No historical database payouts found.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted">No historical database payouts found.</td></tr>
                                 <?php else: ?>
                                     <?php foreach($payroll_history as $row): ?>
                                         <tr>
                                             <td><span class="font-monospace fw-bold">#PAY-00<?= (int)($row['id'] ?? 0) ?></span></td>
                                             <td><?= htmlspecialchars($row['username'] ?? '') ?></td>
                                             <td>LKR <?= number_format((float)($row['total_paid'] ?? 0), 2) ?></td>
+                                            <td><span class="font-monospace"><?= htmlspecialchars($row['paydate'] ?? '') ?></span></td>
                                             <td><span class="badge bg-success-subtle text-success border px-2 py-1"><?= htmlspecialchars($row['settlement_status'] ?? '✓ PAID') ?></span></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -1127,48 +1275,24 @@ function calculateOvertimeHours(loginValue, logoutValue) {
     return overtimeHours > 0 ? overtimeHours : 0;
 }
 
-function loadEmployeeData() {
-    const select = document.getElementById('employeeSelect');
-    const selectedOption = select.options[select.selectedIndex];
-    const baseSalaryInput = document.getElementById('baseSalary');
-    const otRateInput = document.getElementById('displayOtRate');
-    const otRateDisplayInput = document.getElementById('otRateDisplay');
-
-    if (!selectedOption || !selectedOption.value) {
-        baseSalaryInput.value = 0;
-        otRateInput.value = 0;
-        otRateDisplayInput.value = 0;
-        currentOtRate = 0;
-        calculateTotalSalary();
-        return;
-    }
-
-    const baseSalary = parseFloat(selectedOption.getAttribute('data-base-salary')) || 0;
-    const otRate = parseFloat(selectedOption.getAttribute('data-ot-rate')) || 0;
-    baseSalaryInput.value = baseSalary.toFixed(2);
-    otRateInput.value = otRate.toFixed(2);
-    otRateDisplayInput.value = otRate.toFixed(2);
-    currentOtRate = otRate;
-    calculateTotalSalary();
+function syncEmployeeSelections(val) {
+    const selects = document.querySelectorAll('.employeeSelectClass');
+    selects.forEach(s => {
+        if (s.value !== val) {
+            s.value = val;
+        }
+    });
 }
 
 function loadAttendanceData() {
     const select = document.getElementById('attendanceSelect');
     const selectedOption = select.options[select.selectedIndex];
-    const baseSalaryInput = document.getElementById('baseSalary');
-    const otRateInput = document.getElementById('displayOtRate');
-    const otRateDisplayInput = document.getElementById('otRateDisplay');
-
+    
     if (!selectedOption || !selectedOption.value) {
         document.getElementById('attendanceSummary').value = '';
-        baseSalaryInput.value = 0;
-        otRateInput.value = 0;
-        otRateDisplayInput.value = 0;
-        document.getElementById('basePayHidden').value = 0;
+        document.getElementById('displayOtRate').value = 0;
         document.getElementById('otHours').value = 0;
-        currentOtHours = 0;
-        currentOtRate = 0;
-        calculateTotalSalary();
+        calculateOtAmount();
         return;
     }
 
@@ -1176,45 +1300,69 @@ function loadAttendanceData() {
     const logout = selectedOption.getAttribute('data-logout') || '';
     const date = selectedOption.getAttribute('data-date') || '';
     const accountName = selectedOption.getAttribute('data-accountant') || '';
-    const baseSalary = parseFloat(selectedOption.getAttribute('data-base-salary')) || 0;
     const otRate = parseFloat(selectedOption.getAttribute('data-ot-rate')) || 0;
+    
+    // Automatically set the employee select if they select attendance record first
+    const accountantUserId = selectedOption.getAttribute('data-accountant-userid');
+    if (accountantUserId) {
+        syncEmployeeSelections(accountantUserId);
+        loadMonthlySalaryDetails();
+    }
 
     document.getElementById('attendanceSummary').value = date + ' | ' + login + ' - ' + logout + ' | ' + accountName;
-    baseSalaryInput.value = baseSalary.toFixed(2);
-    otRateInput.value = otRate.toFixed(2);
-    otRateDisplayInput.value = otRate.toFixed(2);
-    document.getElementById('basePayHidden').value = baseSalary.toFixed(2);
-    document.getElementById('otRateHidden').value = otRate.toFixed(2);
-    currentOtRate = otRate;
-    currentOtHours = calculateOvertimeHours(login, logout);
-    document.getElementById('otHours').value = currentOtHours.toFixed(2);
-    calculateTotalSalary();
+    document.getElementById('displayOtRate').value = otRate.toFixed(2);
+    
+    const calculatedOtHours = calculateOvertimeHours(login, logout);
+    document.getElementById('otHours').value = calculatedOtHours.toFixed(2);
+    calculateOtAmount();
 }
 
-function toggleBonusField() {
-    const isChecked = document.getElementById('bonusToggle').checked;
-    const bonusInput = document.getElementById('bonusAmount');
-    bonusInput.disabled = !isChecked;
-    if(!isChecked) {
-        bonusInput.value = 0;
-    }
-    calculateTotalSalary();
-}
-
-function calculateTotalSalary() {
-    const baseSalary = parseFloat(document.getElementById('baseSalary').value) || 0;
+function calculateOtAmount() {
+    const otRate = parseFloat(document.getElementById('displayOtRate').value) || 0;
     const otHours = parseFloat(document.getElementById('otHours').value) || 0;
-    const otRate = parseFloat(document.getElementById('otRateDisplay').value) || 0;
-    const bonus = parseFloat(document.getElementById('bonusAmount').value) || 0;
+    const otAmount = otRate * otHours;
+    
+    document.getElementById('displayOtAmount').innerText = 'LKR ' + otAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('otPayHidden').value = otAmount.toFixed(2);
+}
 
-    const basePay = baseSalary;
-    const otPay = (otHours > 0 && otRate > 0) ? (otHours * otRate) : 0;
-    document.getElementById('basePayHidden').value = baseSalary.toFixed(2);
-    document.getElementById('otPayHidden').value = otPay.toFixed(2);
-    document.getElementById('otRateHidden').value = otRate.toFixed(2);
+function loadMonthlySalaryDetails() {
+    const employeeId = document.getElementById('employeeSelectMonthly').value;
+    const month = document.getElementById('salaryMonth').value;
+    
+    if (!employeeId) {
+        document.getElementById('monthlyBaseSalary').value = 0;
+        document.getElementById('monthlyOtTotal').value = 0;
+        calculateMonthlyTotal();
+        return;
+    }
+    
+    fetch(`owner_dashboard.php?ajax_action=get_salary_details&employee_id=${employeeId}&month=${month}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('monthlyBaseSalary').value = data.base_salary.toFixed(2);
+                document.getElementById('monthlyOtTotal').value = data.sum_ot.toFixed(2);
+            } else {
+                document.getElementById('monthlyBaseSalary').value = 0;
+                document.getElementById('monthlyOtTotal').value = 0;
+            }
+            calculateMonthlyTotal();
+        })
+        .catch(err => {
+            console.error(err);
+            calculateMonthlyTotal();
+        });
+}
 
-    const totalPayout = basePay + otPay + bonus;
-    document.getElementById('displayTotalPayout').innerText = 'LKR ' + totalPayout.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+function calculateMonthlyTotal() {
+    const base = parseFloat(document.getElementById('monthlyBaseSalary').value) || 0;
+    const ot = parseFloat(document.getElementById('monthlyOtTotal').value) || 0;
+    const bonus = parseFloat(document.getElementById('monthlyBonus').value) || 0;
+    
+    const total = base + ot + bonus;
+    document.getElementById('displayMonthlyTotal').innerText = 'LKR ' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('monthlyTotalHidden').value = total.toFixed(2);
 }
 
 function exportReport(format) {
