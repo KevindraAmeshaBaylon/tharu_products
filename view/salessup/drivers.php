@@ -77,6 +77,8 @@ $conn->close();
     
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <style>
         /* Reused specific styles for the light dashboard theme */
@@ -168,7 +170,7 @@ $conn->close();
                 <h3 class="fw-bold text-dark mb-1">Driver Fleet Management</h3>
                 <span class="text-muted small">Hire, edit, and remove delivery personnel</span>
             </div>
-            <button class="btn btn-forest px-4" onclick="openAddModal()">➕ Hire New Driver</button>
+            <button class="btn btn-forest px-4" onclick="openAddModal()"><i class="bi bi-plus-lg"></i> Hire New Driver</button>
         </div>
 
         <!-- Data Table Card -->
@@ -203,12 +205,12 @@ $conn->close();
                                         '<?php echo htmlspecialchars(addslashes($row['drivername'])); ?>', 
                                         '<?php echo $row['driverDOB']; ?>', 
                                         '<?php echo $row['fixed_salary']; ?>'
-                                    )">✏️ Edit</button>
+                                    )"><i class="bi bi-pencil-square"></i> Edit</button>
 
                                     <!-- Delete Button inside a mini-form for safety -->
                                     <form method="POST" action="drivers.php" onsubmit="return confirm('Are you sure you want to permanently remove this driver?');">
                                         <input type="hidden" name="userID" value="<?php echo $row['userID']; ?>">
-                                        <button type="submit" name="delete_driver" class="btn btn-sm btn-danger-light px-3">🗑️ Remove</button>
+                                        <button type="submit" name="delete_driver" class="btn btn-sm btn-danger-light px-3"><i class="bi bi-trash"></i> Remove</button>
                                     </form>
                                 </div>
                             </td>
