@@ -2,7 +2,7 @@
 
 <img src="./images/LOGO.png" alt="Tharu & Products Logo" width="140"/>
 
-# 🌾 Tharu & Products
+# Tharu & Products
 ### Animal Feed Supply Management System
 
 *Digitizing payroll, inventory, and sales for a growing animal feed business.*
@@ -22,7 +22,7 @@
 
 ## 📖 Overview
 
-**Tharu & Products** (Reg. No. WZ7213) is an animal feed supplier based in Maradagahamula, Sri Lanka, producing feed for chickens, cows, and pigs for both large client farms and independent small farms. Like many growing SMEs, the business has historically run on **paper logs and manual calculations** — a system prone to human error, data loss, and inefficiency as the business scales.
+**Tharu & Products** is an animal feed supplier based in Maradagahamula, Sri Lanka, producing feed for chickens, cows, and pigs for both large client farms and independent small farms. Like many growing SMEs, the business has historically run on **paper logs and manual calculations** — a system prone to human error, data loss, and inefficiency as the business scales.
 
 This project replaces that manual workflow with a **role-based web application** that centralizes:
 
@@ -173,24 +173,20 @@ Developed following the **Agile methodology**, with testing woven throughout eac
 | Unit Testing | Verify isolated components work as intended |
 | Integration Testing | Validate data flow between connected components |
 | System Testing | Confirm the full system meets functional & non-functional requirements |
-| User Acceptance Testing | Validate real-world readiness with actual staff |
-| Performance Testing | Ensure responsiveness under realistic workloads |
-| Regression Testing | Catch issues introduced by new changes |
-| Compatibility Testing | Confirm consistent behavior across browsers, devices & OSes |
 
 ---
 
 ## 👥 Team
 
-**Group 05 — DSE25.2F, School of Computing and Engineering**
+**Group 05 — Diploma in Software Engineering, School of Computing and Engineering**
 Supervised by **Ms. Amaya Lokuliyana**
 
-| Student ID | Name |
-|---|---|
-| CODSE25.2F-007 | Ranasinghe S. N. |
-| CODSE25.2F-024 | Baylon K. A. |
-| CODSE25.2F-015 | Pathirana M. T. T. |
-| CODSE25.2F-037 | Ravi N. |
+| Name |
+|---|
+| Ranasinghe S. N. |
+| Baylon K. A. |
+| Pathirana M. T. T. |
+| Ravi N. |
 
 Built for **Tharu & Products**, owned by **Mr. M. P. Ajith Pathirana**.
 
