@@ -397,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <li class="nav-item"><a class="nav-link" href="#about-section">About Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="#contact-section">Contact Us</a></li>
             </ul>
-            <div class="d-flex align-items-center">
+            <div class="d-flex justify-content-center mt-3 mt-lg-0">
                 <a href="auth/login.php" class="btn btn-sm btn-forest px-3">Sign In</a>
             </div>
         </div>
