@@ -59,7 +59,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         z-index: 1;
     }
 
-    /* ANIME DETAIL: Zoro's Katana Slice & Conqueror's Haki Aura */
     .nav-dash-link::after {
         content: '';
         position: absolute;
@@ -85,7 +84,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         background-color: var(--sidebar-active);
         color: #ffffff;
         border-left: 4px solid var(--forest-main);
-        /* Zoro's Conqueror's Haki subtle emission pulse */
         animation: hakiEmission 1.5s infinite alternate ease-in-out;
     }
 
