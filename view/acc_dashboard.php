@@ -29,7 +29,6 @@ $dashboardActionTabMap = [
     'update_salary' => 'salaryLedger',
     'delete_salary' => 'salaryLedger',
     'log_expense' => 'expenses',
-    'update_expense' => 'expenseLedger',
     'delete_expense' => 'expenseLedger',
     'generate_report' => 'reports',
     'export_report' => 'reports'
@@ -661,48 +660,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         dashboardRedirectWithFlash('error', 'Unable to delete salary record: ' . $conn->error, 'salaryLedger');
     }
     $stmt->close();
-}
-
-//EXPENSE RECORD EDIT / DELETE
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_expense') {
-    $expenseID = intval($_POST['expense_id'] ?? 0);
-    $expense_type = trim($_POST['expense_type'] ?? '');
-    $custom_type = trim($_POST['custom_expense_type'] ?? '');
-    $amount = floatval($_POST['amount'] ?? 0);
-
-    $final_type = ($expense_type === 'Other' && !empty($custom_type)) ? $custom_type : $expense_type;
-    if ($expenseID > 0 && !empty($final_type) && $amount > 0) {
-        $ownershipStmt = $conn->prepare("SELECT expenseID, type, amount FROM expense_tbl WHERE expenseID = ? AND accountantID = ? LIMIT 1");
-        $ownershipStmt->bind_param("ii", $expenseID, $accountantID);
-        $ownershipStmt->execute();
-        $existingExpense = $ownershipStmt->get_result()->fetch_assoc();
-        $ownershipStmt->close();
-
-        if (!$existingExpense) {
-            dashboardRedirectWithFlash('error', 'Expense edit failed: record not found for your account.', 'expenseLedger');
-        }
-
-        $existingType = trim((string)($existingExpense['type'] ?? ''));
-        $existingAmount = floatval($existingExpense['amount'] ?? 0);
-        if ($existingType === $final_type && abs($existingAmount - $amount) < 0.00001) {
-            dashboardRedirectWithFlash('success', 'No changes detected. Expense values are already up to date.', 'expenseLedger');
-        }
-
-        $stmt = $conn->prepare("UPDATE expense_tbl SET type = ?, amount = ? WHERE expenseID = ? AND accountantID = ?");
-        $stmt->bind_param("sdii", $final_type, $amount, $expenseID, $accountantID);
-        if ($stmt->execute()) {
-            if ($stmt->affected_rows > 0) {
-                dashboardRedirectWithFlash('success', 'Expense record updated successfully.', 'expenseLedger');
-            }
-
-            dashboardRedirectWithFlash('error', 'Expense update could not be applied. Please retry.', 'expenseLedger');
-        } else {
-            dashboardRedirectWithFlash('error', 'Unable to update expense record: ' . $conn->error, 'expenseLedger');
-        }
-        $stmt->close();
-    } else {
-        dashboardRedirectWithFlash('error', 'Please provide a valid expense description and amount.', 'expenseLedger');
-    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_expense') {
@@ -1482,7 +1439,6 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                             <td class="text-start"><?= htmlspecialchars($el['type']) ?></td>
                                             <td class="fw-semibold text-danger"><?= number_format($el['amount'], 2) ?> LKR</td>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-outline-primary btn-sm me-1" onclick="openExpenseEditModal(<?= $el['expenseID'] ?>, <?= json_encode($el['type']) ?>, <?= json_encode($el['amount']) ?>)">Edit</button>
                                                 <form action="" method="POST" class="d-inline" onsubmit="return confirm('Delete this expense record?');">
                                                     <input type="hidden" name="action" value="delete_expense">
                                                     <input type="hidden" name="expense_id" value="<?= htmlspecialchars($el['expenseID']) ?>">
@@ -1765,34 +1721,6 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     </div>
 </div>
 
-<div class="modal fade" id="expenseEditModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form action="" method="POST" class="modal-content border-0 shadow-lg" style="border-radius:20px;">
-            <input type="hidden" name="action" value="update_expense">
-            <input type="hidden" name="tab_id" value="expenseLedger">
-            <input type="hidden" id="expenseEditID" name="expense_id" value="">
-            <div class="modal-header border-0 bg-light px-4 pt-4">
-                <h5 class="modal-title fw-bold">Edit Expense Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body px-4 py-3">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Expense Description</label>
-                    <input type="text" id="expenseEditType" name="expense_type" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Amount Paid (LKR)</label>
-                    <input type="number" step="0.01" min="0.01" id="expenseEditAmount" name="amount" class="form-control" required>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light p-3 px-4">
-                <button type="button" class="btn btn-secondary border-0 text-dark bg-transparent fw-semibold" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary px-4 shadow-sm">Save Changes</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Handle Custom Dropdown Selector Displays
@@ -1846,15 +1774,6 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         // userID is the user_tbl.userID for the employee; set it directly
         editUserSelect.value = userID || '';
         new bootstrap.Modal(document.getElementById('attendanceEditModal')).show();
-    }
-
-    function openExpenseEditModal(expenseId, expenseType, amount) {
-        document.getElementById('expenseEditID').value = Number(expenseId) || 0;
-        document.getElementById('expenseEditType').value = (expenseType || '').toString().trim();
-
-        const parsedAmount = parseFloat(amount);
-        document.getElementById('expenseEditAmount').value = Number.isFinite(parsedAmount) ? parsedAmount.toFixed(2) : '';
-        new bootstrap.Modal(document.getElementById('expenseEditModal')).show();
     }
 
     // Javascript Toggle Listener revealing or hiding the Manual Holiday Box component
