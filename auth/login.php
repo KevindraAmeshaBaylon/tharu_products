@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'signup') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
-    $password = trim($_POST['password']);
+    $password = trim($_POST['password']); // This collects the raw password string
     
     if (!empty($username) && !empty($email) && !empty($password)) {
         $checkStmt = $conn->prepare("SELECT userID FROM user_tbl WHERE username = ? OR email = ? LIMIT 1");
@@ -121,10 +121,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($checkResult->num_rows > 0) {
             $error_message = "Username or Registration Email addresses already configured.";
         } else {
-            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+            // REMOVED: $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+            
             $defaultRole = 'cust';
             $insertStmt = $conn->prepare("INSERT INTO user_tbl (username, password, email, role) VALUES (?, ?, ?, ?)");
-            $insertStmt->bind_param("ssss", $username, $hashedPassword, $email, $defaultRole);
+            
+            // CHANGED: Passing the raw $password variable directly into the query
+            $insertStmt->bind_param("ssss", $username, $password, $email, $defaultRole);
             
             if ($insertStmt->execute()) {
                 $success_message = "Registration profile deployed! You can now authenticate via Sign In panel.";
