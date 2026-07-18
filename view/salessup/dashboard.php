@@ -5,7 +5,7 @@ require_once '../../model/config/database.php';
 
 // STRICT AUTHENTICATION GUARD (Preserved exactly as requested)
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'salessup') {
-    header("Location: ../auth/login.php");
+    header("Location: ../../auth/login.php");
     exit;
 }
 
