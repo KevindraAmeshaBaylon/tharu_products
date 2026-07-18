@@ -620,15 +620,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             <!-- Contact Information Pane (Highly Visible Text) -->
             <div class="col-12 col-md-4 footer-contact-col">
                 <h6 class="text-white fw-bold font-monospace mb-3">CONTACT US</h6>
-<<<<<<< HEAD
-                <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>No.369, Negambo Road, Marandagahamulla, Sri Lanka</p>
-                <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>tharu&products@gmail.com</p>
-                <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 72 313 5134</p>
-=======
                 <p class="small mb-1"><i class="bi bi-geo-alt-fill me-2"></i>No.235, Negambo Road,Marandagahamulla</p>
                 <p class="small mb-1"><i class="bi bi-envelope-fill me-2"></i>tharufeedproducts@gmail.com</p>
                 <p class="small mb-0"><i class="bi bi-telephone-fill me-2"></i>+94 11 2345 678</p>
->>>>>>> c01c9cccd77fc290df1677c8b8519b179c1634e0
             </div>
 
             <!-- Portal Shortcuts -->
