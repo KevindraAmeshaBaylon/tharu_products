@@ -265,7 +265,7 @@ if (isset($_GET['success'])) {
 
             <div class="mt-auto">
                 <a href="../auth/logout.php" class="nav-link text-danger mb-3">
-                    <i class="bi bi-box-arrow-right"></i> Log Out
+                    <i class="bi bi-box-arrow-right"></i> Sign Out
                 </a>
             </div>
         </div>
@@ -399,7 +399,7 @@ if (isset($_GET['success'])) {
                             </div>
                         </div>
                     <?php endif; ?>
-                    
+
                 <!-- TAB 4: ORDER HISTORY -->
                 <?php elseif ($viewTab === 'history'): ?>
                     <div class="d-flex justify-content-between align-items-center mb-2">
