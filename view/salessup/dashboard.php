@@ -15,10 +15,44 @@ $conn = getDBConnection();
 // Initialize metrics
 $totalOrders = 0;
 $pendingOrders = 0;
-$processingOrders = 12; // Faked for UI
-$dispatchedOrders = 5;  // Faked for UI
-$soldUnits = 1450;      // Faked for UI
+$processingOrders = 0;
+$dispatchedOrders = 0;
+$soldUnits = 0;
 $monthlyIncome = 0;
+
+// Fetch Processing Orders (Orders linked to batches currently in production)
+$procQuery = "
+    SELECT COUNT(DISTINCT o.orderID) 
+    FROM order_tbl o 
+    JOIN order_batch_tbl ob ON o.orderID = ob.orderID 
+    JOIN productionbatch_tbl pb ON ob.batchID = pb.batchID 
+    WHERE pb.inproduction = 1 AND o.cancelled = 0
+";
+if ($procResult = $conn->query($procQuery)) {
+    $processingOrders = $procResult->fetch_row()[0];
+}
+
+// Fetch Dispatched Orders (Orders linked to dispatched batches, not yet delivered)
+$dispQuery = "
+    SELECT COUNT(DISTINCT o.orderID) 
+    FROM order_tbl o 
+    JOIN order_batch_tbl ob ON o.orderID = ob.orderID 
+    JOIN productionbatch_tbl pb ON ob.batchID = pb.batchID 
+    WHERE pb.dispatched = 1 AND o.delivered = 0 AND o.cancelled = 0
+";
+if ($dispResult = $conn->query($dispQuery)) {
+    $dispatchedOrders = $dispResult->fetch_row()[0];
+}
+
+// Fetch Sold Units (Dispatched) (Sum of output quantity from dispatched batches)
+$unitsQuery = "
+    SELECT SUM(outputqty) 
+    FROM productionbatch_tbl 
+    WHERE dispatched = 1
+";
+if ($unitsResult = $conn->query($unitsQuery)) {
+    $soldUnits = $unitsResult->fetch_row()[0] ?: 0;
+}
 
 // Fetch Total Orders
 $result = $conn->query("SELECT COUNT(*) FROM Order_tbl");
@@ -198,7 +232,7 @@ $conn->close();
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Processing Orders</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($processingOrders); ?></div>
-                    <span class="text-info small fw-bold"><i class="bi bi-gear"></i> UI Mock</span>
+                    <span class="text-primary small fw-bold"><i class="bi bi-arrow-repeat"></i> In Progress</span> <span class="text-muted small">manufacturing</span>               
                 </div>
             </div>
 
@@ -206,7 +240,7 @@ $conn->close();
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Dispatched Orders</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($dispatchedOrders); ?></div>
-                    <span class="text-info small fw-bold"><i class="bi bi-gear"></i> UI Mock</span>
+                    <span class="text-info small fw-bold"><i class="bi bi-truck"></i> In Transit</span> <span class="text-muted small">out for delivery</span>                
                 </div>
             </div>
 
@@ -214,7 +248,7 @@ $conn->close();
                 <div class="stat-card-light shadow-sm h-100">
                     <span class="text-muted small text-uppercase">Sold Units (Dispatched)</span>
                     <div class="metric-value mt-1 text-dark"><?php echo htmlspecialchars($soldUnits); ?></div>
-                    <span class="text-info small fw-bold"><i class="bi bi-gear"></i> UI Mock</span>
+                    <span class="text-success small fw-bold"><i class="bi bi-box-seam"></i> Tracked</span> <span class="text-muted small">live volume</span>
                 </div>
             </div>
         </div>

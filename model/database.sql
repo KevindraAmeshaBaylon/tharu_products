@@ -747,6 +747,69 @@ INSERT INTO `payment_salesreport_tbl` (`paymentID`, `salesrepID`) VALUES
 (15001, 18001),
 (15002, 18001);
 
--- ==========================================
+-- ====================================================================
+-- THARU PRODUCTS DATABASE - CORE MONTHLY TRANSACTIONS (JULY 2026)
+-- ====================================================================
+
+-- --------------------------------------------------------------------
+-- 1. order_tbl RECORDS
+-- --------------------------------------------------------------------
+-- Capturing standard, bulk, and minor orders across the entire month
+INSERT INTO `order_tbl` (`orderID`, `date`, `totamt`, `delivered`, `cancelled`, `customerID`, `orderhistoryID`, `salessupID`, `driverID`) VALUES
+(12004, '2026-07-05', 420000.00, 1, 0, 10001, 501, 4001, 5001), -- Delmo Bulk
+(12005, '2026-07-07', 380000.00, 1, 0, 10002, 502, 4001, 5002), -- Maxies Bulk
+(12006, '2026-07-10', 70000.00,  1, 0, 10003, NULL, 4001, 5003), -- Ruwan Standard
+(12007, '2026-07-14', 420000.00, 1, 0, 10001, 501, 4001, 5001), -- Delmo Bulk
+(12008, '2026-07-18', 380000.00, 1, 0, 10002, 502, 4001, 5002), -- Maxies Bulk
+(12009, '2026-07-20', 35000.00,  1, 0, 10003, NULL, 4001, 5003), -- Ruwan Minor
+(12010, '2026-07-24', 420000.00, 1, 0, 10001, 501, 4001, 5001), -- Delmo Bulk
+(12011, '2026-07-26', 380000.00, 1, 0, 10002, 502, 4001, 5002), -- Maxies Bulk
+(12012, '2026-07-29', 420000.00, 0, 0, 10001, 501, 4001, 5001), -- Delmo Pending
+(12013, '2026-07-30', 35000.00,  1, 0, 10003, NULL, 4001, 5003); -- Ruwan Minor
+
+-- --------------------------------------------------------------------
+-- 2. attendance_tbl RECORDS
+-- --------------------------------------------------------------------
+-- Weekly operational shift logging for payroll tracking
+INSERT INTO `attendance_tbl` (`attendanceID`, `date`, `login`, `logout`, `stocksupID`, `accountantID`, `salessupID`, `driverID`, `workerID`) VALUES
+-- Week 2 Shifts
+(1006, '2026-07-08', '08:00:00', '16:00:00', NULL, 2001, NULL, NULL, NULL),
+(1007, '2026-07-08', '07:45:00', '16:45:00', 3001, NULL, NULL, NULL, NULL),
+(1008, '2026-07-08', '08:00:00', '16:00:00', NULL, NULL, 4001, NULL, NULL),
+(1009, '2026-07-08', '06:00:00', '18:00:00', NULL, NULL, NULL, 5001, NULL),
+(1010, '2026-07-08', '07:30:00', '16:30:00', NULL, NULL, NULL, NULL, 6001),
+-- Week 3 Shifts
+(1011, '2026-07-15', '08:00:00', '16:00:00', NULL, 2001, NULL, NULL, NULL),
+(1012, '2026-07-15', '07:50:00', '16:10:00', 3001, NULL, NULL, NULL, NULL),
+(1013, '2026-07-15', '08:00:00', '16:00:00', NULL, NULL, 4001, NULL, NULL),
+(1014, '2026-07-15', '06:15:00', '18:45:00', NULL, NULL, NULL, 5002, NULL),
+(1015, '2026-07-15', '07:30:00', '19:30:00', NULL, NULL, NULL, NULL, 6001),
+-- Week 4 Shifts
+(1016, '2026-07-22', '08:00:00', '16:00:00', NULL, 2001, NULL, NULL, NULL),
+(1017, '2026-07-22', '07:40:00', '16:45:00', 3001, NULL, NULL, NULL, NULL),
+(1018, '2026-07-22', '07:55:00', '17:15:00', NULL, NULL, 4001, NULL, NULL),
+(1019, '2026-07-22', '06:00:00', '18:00:00', NULL, NULL, NULL, 5003, NULL),
+(1020, '2026-07-22', '07:30:00', '16:30:00', NULL, NULL, NULL, NULL, 6001),
+-- Week 5 Shifts
+(1021, '2026-07-29', '08:00:00', '17:00:00', NULL, 2001, NULL, NULL, NULL),
+(1022, '2026-07-29', '07:45:00', '16:45:00', 3001, NULL, NULL, NULL, NULL),
+(1023, '2026-07-29', '08:00:00', '17:00:00', NULL, NULL, 4001, NULL, NULL),
+(1024, '2026-07-29', '05:30:00', '19:00:00', NULL, NULL, NULL, 5001, NULL),
+(1025, '2026-07-29', '07:30:00', '18:00:00', NULL, NULL, NULL, NULL, 6001);
+
+-- --------------------------------------------------------------------
+-- 3. expense_tbl RECORDS
+-- --------------------------------------------------------------------
+-- Tracking operational costs, factory utilities, and raw material expenses
+INSERT INTO `expense_tbl` (`expenseID`, `type`, `amount`, `materialID`, `accountantID`) VALUES
+(14004, 'Stock',   285000.00, 8002, 2001), -- Broken Rice Stock
+(14005, 'Stock',   440000.00, 8003, 2001), -- Maize Meal Stock
+(14006, 'Stock',   420000.00, 8004, 2001), -- Soya Bean Meal Stock
+(14007, 'Utility', 18400.00,  NULL, 2001), -- Commercial Water Bill
+(14008, 'Utility', 12500.00,  NULL, 2001), -- Maintenance Costs
+(14009, 'Utility', 9000.00,   NULL, 2001), -- Internet & Comm Lines
+(14010, 'Salary',  195000.00, NULL, 2001); -- General Payroll Entry
+
+-- ====================================================================
 -- END OF SCRIPT
--- ==========================================
+-- ====================================================================

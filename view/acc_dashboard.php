@@ -1222,7 +1222,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                         <tr>
                                             <td><?= htmlspecialchars($att['date']) ?></td>
                                             <td><?= htmlspecialchars($att['emp_name']) ?></td>
-                                            <td><span class="badge bg-secondary text-dark rounded-pill"><?= htmlspecialchars($att['emp_role']) ?></span></td>
+                                            <td><span class="badge border border-dark text-dark rounded-pill"><?= htmlspecialchars($att['emp_role']) ?></span></td>                                            <td><?= htmlspecialchars($att['login']) ?></td>
                                             <td><?= htmlspecialchars($att['login']) ?></td>
                                             <td><?= htmlspecialchars($att['logout']) ?></td>
                                             <td class="text-center">
