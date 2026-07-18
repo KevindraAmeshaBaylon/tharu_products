@@ -10,7 +10,7 @@ if (isset($_SESSION['user_id']) && !isset($_SESSION['userID'])) {
 }
 
 // AUTHENTICATION GUARD
-if (!isset($_SESSION['userID']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'cust') {
+if (!isset($_SESSION['userID']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'customer') {
     header("Location: ../auth/login.php");
     exit;
 }
@@ -53,26 +53,26 @@ if (!empty($search)) {
 $filterDateFrom = $_GET['date_from'] ?? '';
 $filterDateTo = $_GET['date_to'] ?? '';
 
+// Start with the base query
 $orderQuery = "SELECT orderID, date, totamt, delivered, cancelled FROM order_tbl WHERE customerID = ?";
 $orderParams = [$customerID];
-$orderTypes = "i";
+$orderTypes = "i"; // "i" is for the customerID (integer)
 
+// Add date filtering only if both dates are provided
 if (!empty($filterDateFrom) && !empty($filterDateTo)) {
     $orderQuery .= " AND date BETWEEN ? AND ?";
     $orderParams[] = $filterDateFrom;
     $orderParams[] = $filterDateTo;
-    $orderTypes .= "ss";
+    $orderTypes .= "ss"; // "ss" is for the two date strings
 }
 
 $orderQuery .= " ORDER BY date DESC";
 
+// Prepare and execute
 $historyStmt = $conn->prepare($orderQuery);
-if (!empty($orderParams)) {
-    $historyStmt->bind_param($orderTypes, ...$orderParams);
-}
+$historyStmt->bind_param($orderTypes, ...$orderParams);
 $historyStmt->execute();
-$historyRes = $historyStmt->get_result();
-$orderHistory = $historyRes->fetch_all(MYSQLI_ASSOC);
+$orderHistory = $historyStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // 4. ACTION: ADD TO CART OR UPDATE CART QUANTITY
 if (isset($_GET['action']) && $_GET['action'] === 'add_to_cart' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -137,6 +137,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_inquiry'])) {
         $errorMsg = "Inquiry message cannot be empty.";
     }
 }
+
+// FETCH MY INQUIRIES
+$myInquiries = [];
+$iqStmt = $conn->prepare("SELECT message, response, answered FROM inquiry_tbl WHERE customerID = ? ORDER BY inquiryID DESC");
+$iqStmt->bind_param("i", $customerID);
+$iqStmt->execute();
+$myInquiries = $iqStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 // 8. ACTION: PLACE AND CONFIRM ORDER
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
@@ -235,7 +242,6 @@ if (isset($_GET['success'])) {
                 <span class="me-2 fs-4">🌾</span> <span class="fw-bold text-white fs-6">Customer</span>
             </div>
             
-            <!-- Navigation links grow to fill top space -->
             <div class="nav flex-column flex-grow-1">
                 <a href="?view=overview" class="nav-link <?= $viewTab === 'overview' ? 'active' : '' ?>">
                     <i class="bi bi-speedometer2"></i> Overview
@@ -257,7 +263,6 @@ if (isset($_GET['success'])) {
                 </a>
             </div>
 
-            <!-- Logout button pinned to bottom -->
             <div class="mt-auto">
                 <a href="../auth/logout.php" class="nav-link text-danger mb-3">
                     <i class="bi bi-box-arrow-right"></i> Log Out
@@ -357,7 +362,10 @@ if (isset($_GET['success'])) {
                                         $pStmt->bind_param("i", $id);
                                         $pStmt->execute();
                                         $prod = $pStmt->get_result()->fetch_assoc();
-                                        $checkoutTotal += ($prod['unitprice'] ?? 0) * $qty;
+                                        
+                                        // FIXED: Added safety check for null products
+                                        if ($prod):
+                                            $checkoutTotal += $prod['unitprice'] * $qty;
                                     ?>
                                         <div class="row align-items-center mb-2 small">
                                             <div class="col-6 text-dark fw-medium"><?= htmlspecialchars($prod['name']) ?></div>
@@ -366,7 +374,11 @@ if (isset($_GET['success'])) {
                                             </div>
                                             <div class="col-2 text-end text-secondary fw-medium">LKR <?= number_format($prod['unitprice'] * $qty, 2) ?></div>
                                         </div>
-                                    <?php endforeach; ?>
+                                    <?php 
+                                        else: 
+                                            unset($_SESSION['cart'][$id]);
+                                        endif; 
+                                    endforeach; ?>
                                     <button type="submit" class="btn btn-sm btn-secondary w-100 mt-2">Update Cart Quantities</button>
                                 </form>
 
@@ -387,7 +399,7 @@ if (isset($_GET['success'])) {
                             </div>
                         </div>
                     <?php endif; ?>
-
+                    
                 <!-- TAB 4: ORDER HISTORY -->
                 <?php elseif ($viewTab === 'history'): ?>
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -396,12 +408,30 @@ if (isset($_GET['success'])) {
                             <p class="text-secondary m-0">Track live order status, total bill, or request cancellations for processing batches.</p>
                         </div>
                         <div>
-                            <a href="?view=report" class="btn btn-sm btn-dark">
+                            <a href="?view=report&date_from=<?= htmlspecialchars($filterDateFrom) ?>&date_to=<?= htmlspecialchars($filterDateTo) ?>" class="btn btn-sm btn-dark">
                                 <i class="bi bi-file-earmark-text me-1"></i> View Printable Report
                             </a>
                         </div>
                     </div>
                     <hr>
+
+                    <!-- DATE FILTER FORM -->
+                    <form method="GET" action="cust_dashboard.php" class="row g-3 mb-4 align-items-center bg-light p-3 rounded">
+                        <input type="hidden" name="view" value="history">
+                        <div class="col-auto">
+                            <label class="form-label small fw-bold">From:</label>
+                            <input type="date" name="date_from" class="form-control" value="<?= htmlspecialchars($filterDateFrom) ?>">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label small fw-bold">To:</label>
+                            <input type="date" name="date_to" class="form-control" value="<?= htmlspecialchars($filterDateTo) ?>">
+                        </div>
+                        <div class="col-auto mt-4">
+                            <button type="submit" class="btn btn-primary btn-sm">Filter Results</button>
+                            <a href="?view=history" class="btn btn-outline-secondary btn-sm">Clear</a>
+                        </div>
+                    </form>
+
                     <div class="table-responsive mt-3">
                         <table class="table table-hover align-middle small">
                             <thead class="table-light">
@@ -441,7 +471,7 @@ if (isset($_GET['success'])) {
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="5" class="text-center text-secondary py-4">No dynamic historical orders found for this profile.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-secondary py-4">No historical orders found for this period.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -452,11 +482,11 @@ if (isset($_GET['success'])) {
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
                         <div>
                             <h3 class="fw-bold text-dark">Customer Order History Report</h3>
-                            <p class="text-secondary m-0">Overview of all your placed orders and cumulative bills.</p>
+                            <p class="text-secondary m-0">Filtered Report from <?= htmlspecialchars($filterDateFrom ?: 'Start') ?> to <?= htmlspecialchars($filterDateTo ?: 'Present') ?></p>
                         </div>
                         <div class="no-print d-flex gap-2">
                             <button onclick="window.print();" class="btn btn-sm btn-dark"><i class="bi bi-printer me-1"></i> Print Report</button>
-                            <a href="?view=history" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to History</a>
+                            <a href="?view=history&date_from=<?= htmlspecialchars($filterDateFrom) ?>&date_to=<?= htmlspecialchars($filterDateTo) ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to History</a>
                         </div>
                     </div>
 
@@ -464,7 +494,7 @@ if (isset($_GET['success'])) {
                         <div class="mb-4">
                             <p class="mb-1 text-secondary"><strong>Company:</strong> <span class="text-dark"><?= htmlspecialchars($customerProfile['companyname'] ?? 'N/A') ?></span></p>
                             <p class="mb-1 text-secondary"><strong>Address:</strong> <span class="text-dark"><?= htmlspecialchars($customerProfile['address'] ?? 'N/A') ?></span></p>
-                            <p class="text-secondary small">Generated On: <?= date('Y-m-d H:i:s') ?></p>
+                            <p class="text-secondary small">Report Period: <?= htmlspecialchars($filterDateFrom ?: 'All Time') ?> to <?= htmlspecialchars($filterDateTo ?: 'Present') ?></p>
                         </div>
 
                         <div class="table-responsive">
@@ -472,9 +502,9 @@ if (isset($_GET['success'])) {
                                 <thead class="table-dark">
                                     <tr>
                                         <th class="text-white">Order Ref</th>
-                                        <th class="text-white">Date Generated</th>
+                                        <th class="text-white">Date</th>
                                         <th class="text-white">Total Value</th>
-                                        <th class="text-white">Fulfillment Status</th>
+                                        <th class="text-white">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -490,19 +520,15 @@ if (isset($_GET['success'])) {
                                                 <td class="text-emerald fw-semibold">LKR <?= number_format($order['totamt'], 2) ?></td>
                                                 <td>
                                                     <?php 
-                                                    if (intval($order['cancelled']) === 1) {
-                                                        echo '<span class="text-danger fw-bold">Cancelled</span>';
-                                                    } elseif (intval($order['delivered']) === 1) {
-                                                        echo '<span class="text-success fw-bold">Delivered</span>';
-                                                    } else {
-                                                        echo '<span class="text-amber fw-bold">Pending Processing</span>';
-                                                    }
+                                                    if (intval($order['cancelled']) === 1) echo '<span class="text-danger fw-bold">Cancelled</span>';
+                                                    elseif (intval($order['delivered']) === 1) echo '<span class="text-success fw-bold">Delivered</span>';
+                                                    else echo '<span class="text-amber fw-bold">Pending Processing</span>';
                                                     ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
-                                        <tr><td colspan="4" class="text-center text-secondary py-4">No order history records found.</td></tr>
+                                        <tr><td colspan="4" class="text-center text-secondary py-4">No records found for this period.</td></tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
@@ -516,7 +542,9 @@ if (isset($_GET['success'])) {
                                 </div>
                             </div>
                         <?php endif; ?>
-                    </div>
+                    </div>    
+             
+                      
 
                 <!-- TAB 6: SEND INQUIRY -->
                 <?php elseif ($viewTab === 'inquiry'): ?>
@@ -530,6 +558,64 @@ if (isset($_GET['success'])) {
                         </div>
                         <button type="submit" name="send_inquiry" class="btn btn-forest px-4">Submit Inquiry</button>
                     </form>
+
+                    <!-- Response of inquiries -->
+                    <div class="mt-5">
+                        <h5 class="fw-bold text-dark">Your Previous Inquiries</h5>
+                        <div class="table-responsive mt-3">
+                            <table class="table table-bordered align-middle small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Your Message</th>
+                                        <th>Response</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    if (!empty($myInquiries)): 
+                                        // 1. Filter and Group the inquiries
+                                        $uniqueInquiries = [];
+                                        foreach ($myInquiries as $row) {
+                                            $msg = $row['message'];
+                                            // If we don't have this message yet, OR this current row is 'Answered', 
+                                            // we prioritize the 'Answered' version.
+                                            if (!isset($uniqueInquiries[$msg]) || !empty($row['response'])) {
+                                                $uniqueInquiries[$msg] = $row;
+                                            }
+                                        }
+                                    ?>
+                                        <?php foreach ($uniqueInquiries as $row): ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($row['message']) ?></td>
+                                                
+                                                <td>
+                                                    <?php if (!empty($row['response'])): ?>
+                                                        <?= htmlspecialchars($row['response']) ?>
+                                                    <?php else: ?>
+                                                        <em class="text-muted">Waiting for response...</em>
+                                                    <?php endif; ?>
+                                                </td>
+                                                
+                                                <td>
+                                                    <?php if (!empty($row['response'])): ?>
+                                                        <span class="badge bg-success">Answered</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-warning text-dark">Pending</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="3" class="text-center text-secondary">No inquiries sent yet.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                    
+                            </table>
+                        </div>
+                    </div>
                 <?php endif; ?>
 
             </div>
