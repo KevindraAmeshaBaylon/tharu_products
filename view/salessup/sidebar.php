@@ -104,7 +104,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         }
     }
 
-    /* SUPREME KING HAKI: Red/Black Lightning on Sign Out */
     .sign-out-text {
         position: relative;
         z-index: 2;
