@@ -477,6 +477,276 @@ INSERT INTO Order_Batch_tbl (batchID, orderID) VALUES
 --added role column to user_tbl and set roles for existing users
 ALTER TABLE user_tbl ADD role VARCHAR(20) NOT NULL ;
 UPDATE `user_tbl` SET `role` = 'owner' WHERE `user_tbl`.`userID` = 1; UPDATE `user_tbl` SET `role` = 'stocksup' WHERE `user_tbl`.`userID` = 2; UPDATE `user_tbl` SET `role` = 'accountant' WHERE `user_tbl`.`userID` = 3; UPDATE `user_tbl` SET `role` = 'salessup' WHERE `user_tbl`.`userID` = 4; UPDATE `user_tbl` SET `role` = 'worker' WHERE `user_tbl`.`userID` = 5; UPDATE `user_tbl` SET `role` = 'worker' WHERE `user_tbl`.`userID` = 6; UPDATE `user_tbl` SET `role` = 'driver' WHERE `user_tbl`.`userID` = 7; UPDATE `user_tbl` SET `role` = 'driver' WHERE `user_tbl`.`userID` = 8; UPDATE `user_tbl` SET `role` = 'cust' WHERE `user_tbl`.`userID` = 9; UPDATE `user_tbl` SET `role` = 'cust' WHERE `user_tbl`.`userID` = 10; UPDATE `user_tbl` SET `role` = 'cust' WHERE `user_tbl`.`userID` = 11;
--- ============================================================================
+
+-- ==========================================
+-- THARU PRODUCTS DATABASE INITIALIZATION
+-- ==========================================
+
+-- ------------------------------------------
+-- SAFE DATA CLEARING (RESET)
+-- ------------------------------------------
+SET FOREIGN_KEY_CHECKS = 0;
+
+TRUNCATE TABLE `user_tbl`;
+TRUNCATE TABLE `usercontact_tbl`;
+TRUNCATE TABLE `owner_tbl`;
+TRUNCATE TABLE `accountant_tbl`;
+TRUNCATE TABLE `stocksuperviser_tbl`;
+TRUNCATE TABLE `salessuperviser_tbl`;
+TRUNCATE TABLE `driver_tbl`;
+TRUNCATE TABLE `worker_tbl`;
+TRUNCATE TABLE `supplier_tbl`;
+TRUNCATE TABLE `rawmaterial_tbl`;
+TRUNCATE TABLE `productionbatch_tbl`;
+TRUNCATE TABLE `product_tbl`;
+TRUNCATE TABLE `productperbatch_tbl`;
+TRUNCATE TABLE `rawmaterial_batch_tbl`;
+TRUNCATE TABLE `customer_tbl`;
+TRUNCATE TABLE `orderhistory_tbl`;
+TRUNCATE TABLE `order_tbl`;
+TRUNCATE TABLE `order_batch_tbl`;
+TRUNCATE TABLE `inquiry_tbl`;
+TRUNCATE TABLE `attendance_tbl`;
+TRUNCATE TABLE `expense_tbl`;
+TRUNCATE TABLE `payment_tbl`;
+TRUNCATE TABLE `salary_tbl`;
+TRUNCATE TABLE `expensereport_tbl`;
+TRUNCATE TABLE `salesreport_tbl`;
+TRUNCATE TABLE `profitreport_tbl`;
+TRUNCATE TABLE `exp_report_tbl`;
+TRUNCATE TABLE `payment_salesreport_tbl`;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ------------------------------------------
+-- 1. INSERT INTO user_tbl
+-- ------------------------------------------
+INSERT INTO `user_tbl` (`userID`, `username`, `password`, `email`, `createdAt`, `role`) VALUES
+(1, 'owner', 'owner001', 'ajith@tharuproducts.com', NOW(), 'owner'),
+(2, 'accountant', 'acc001', 'finance@tharuproducts.com', NOW(), 'accountant'),
+(3, 'stocksup', 'stocksup001', 'stocks@tharuproducts.com', NOW(), 'stocksup'),
+(4, 'salessup', 'salessup001', 'sales@tharuproducts.com', NOW(), 'salessup'),
+(5, 'driver01', 'driver001', 'anura.d@tharuproducts.com', NOW(), 'driver'),
+(6, 'driver02', 'driver002', 'sunil.s@tharuproducts.com', NOW(), 'driver'),
+(7, 'driver03', 'driver003', 'nimal.p@tharuproducts.com', NOW(), 'driver'),
+(8, 'worker01', 'worker001', 'worker1@tharuproducts.com', NOW(), 'worker'),
+(9, 'worker02', 'worker002', 'worker2@tharuproducts.com', NOW(), 'worker'),
+(10, 'worker03', 'worker003', 'worker3@tharuproducts.com', NOW(), 'worker'),
+(11, 'delmo', 'customer001', 'orders@delmo.lk', NOW(), 'customer'),
+(12, 'maxies', 'customer002', 'purchasing@maxies.lk', NOW(), 'customer'),
+(13, 'ruwan', 'customer003', 'ruwan.farm@gmail.com', NOW(), 'customer');
+
+-- ------------------------------------------
+-- 2. INSERT INTO usercontact_tbl
+-- ------------------------------------------
+INSERT INTO `usercontact_tbl` (`userID`, `contact`) VALUES
+(1, '0771112222'),
+(2, '0772223333'),
+(3, '0773334444'),
+(4, '0774445555'),
+(5, '0715556661'),
+(6, '0715556662'),
+(7, '0715556663'),
+(8, '0781002001'),
+(9, '0781002002'),
+(10, '0781002003'),
+(11, '0112950950'),
+(12, '0112951951'),
+(13, '0758889991');
+
+-- ------------------------------------------
+-- 3. INSERT INTO owner_tbl
+-- ------------------------------------------
+INSERT INTO `owner_tbl` (`userID`, `ownerID`, `ownerDOB`, `ownerName`, `experiance`) VALUES
+(1, 1001, '1975-06-12', 'Ajith Pathirana', 15);
+
+-- ------------------------------------------
+-- 4. INSERT INTO accountant_tbl
+-- ------------------------------------------
+INSERT INTO `accountant_tbl` (`userID`, `accountantID`, `accountantDOB`, `accountantname`, `base_salary`, `OT_rate`) VALUES
+(2, 2001, '1984-11-20', 'Kamal Perera', 85000.00, 375.00);
+
+-- ------------------------------------------
+-- 5. INSERT INTO stocksuperviser_tbl
+-- ------------------------------------------
+INSERT INTO `stocksuperviser_tbl` (`userID`, `stocksupID`, `stocksupDOB`, `stocksupname`, `base_salary`, `OT_rate`) VALUES
+(3, 3001, '1988-04-15', 'Jagath Silva', 65000.00, 375.00);
+
+-- ------------------------------------------
+-- 6. INSERT INTO salessuperviser_tbl
+-- ------------------------------------------
+INSERT INTO `salessuperviser_tbl` (`userID`, `salessupID`, `salessupDOB`, `salessupname`, `base_salary`, `OT_rate`) VALUES
+(4, 4001, '1990-09-05', 'Lalith De-Silva', 65000.00, 375.00);
+
+-- ------------------------------------------
+-- 7. INSERT INTO driver_tbl
+-- ------------------------------------------
+INSERT INTO `driver_tbl` (`userID`, `driverID`, `driverDOB`, `drivername`, `fixed_salary`) VALUES
+(5, 5001, '1985-02-14', 'Anura Kumara', 45000.00),
+(6, 5002, '1982-07-22', 'Sunil Shantha', 45000.00),
+(7, 5003, '1989-12-10', 'Nimal Siri', 45000.00);
+
+-- ------------------------------------------
+-- 8. INSERT INTO worker_tbl
+-- ------------------------------------------
+INSERT INTO `worker_tbl` (`userID`, `workerID`, `workerDOB`, `workername`, `hour_rate`) VALUES
+(8, 6001, '1993-01-10', 'Asela Kumara', 250.00),
+(9, 6002, '1995-03-22', 'Roshan Peiris', 250.00),
+(10, 6003, '1991-05-18', 'Ruwan Priyadarshana', 250.00);
+
+-- ------------------------------------------
+-- 9. INSERT INTO supplier_tbl
+-- ------------------------------------------
+INSERT INTO `supplier_tbl` (`supplierID`, `contact`, `companyname`, `email`, `stocksupID`) VALUES
+(7001, '0312234123', 'Siri Rice Mill', 'siri.mills@gmail.com', 3001),
+(7002, '0312234567', 'Maradagahamula Grains', 'info@maradagrain.lk', 3001),
+(7003, '0112234987', 'Lanka Vit and Premix', 'sales@lankavit.lk', 3001);
+
+-- ------------------------------------------
+-- 10. INSERT INTO rawmaterial_tbl
+-- ------------------------------------------
+INSERT INTO `rawmaterial_tbl` (`materialID`, `name`, `quantity`, `unitprice`, `totalcost`, `supplierID`) VALUES
+(8001, 'Rice Polish', 5000.00, 80.00, 400000.00, 7001),
+(8002, 'Broken Rice', 3000.00, 95.00, 285000.00, 7001),
+(8003, 'Maize Meal', 4000.00, 110.00, 440000.00, 7002),
+(8004, 'Soya Bean Meal', 2000.00, 210.00, 420000.00, 7002),
+(8005, 'Feed Vitamins', 500.00, 450.00, 225000.00, 7003);
+
+-- ------------------------------------------
+-- 11. INSERT INTO productionbatch_tbl
+-- ------------------------------------------
+INSERT INTO `productionbatch_tbl` (`batchID`, `date`, `outputqty`, `type`, `inproduction`, `completed`, `dispatched`) VALUES
+(9001, '2026-07-01', 150, 'Chicken Feed', 0, 1, 1),
+(9002, '2026-07-05', 100, 'Cow Feed', 0, 1, 1),
+(9003, '2026-07-10', 80, 'Pig Feed', 0, 1, 1),
+(9004, '2026-07-15', 200, 'Chicken Feed', 1, 0, 0);
+
+-- ------------------------------------------
+-- 12. INSERT INTO product_tbl
+-- ------------------------------------------
+INSERT INTO `product_tbl` (`ProductID`, `name`, `type`, `unitprice`, `description`) VALUES
+(101, 'Tharu Chicken Broiler Feed', 'Chicken Feed', 4200.00, 'High-protein formulation for quick broiler growth and optimal health.'),
+(102, 'Tharu Dairy Cow Max', 'Cow Feed', 3800.00, 'Fortified with calcium and vitamins to maximize daily milk yield.'),
+(103, 'Tharu Pig Grower Gold', 'Pig Feed', 3500.00, 'Specially designed nutrient profile to achieve ideal pig weights safely.');
+
+-- ------------------------------------------
+-- 13. INSERT INTO productperbatch_tbl
+-- ------------------------------------------
+INSERT INTO `productperbatch_tbl` (`batchID`, `ProductID`) VALUES
+(9001, 101),
+(9002, 102),
+(9003, 103),
+(9004, 101);
+
+-- ------------------------------------------
+-- 14. INSERT INTO rawmaterial_batch_tbl
+-- ------------------------------------------
+INSERT INTO `rawmaterial_batch_tbl` (`batchID`, `materialID`) VALUES
+(9001, 8001),
+(9001, 8003),
+(9001, 8005),
+(9002, 8002),
+(9002, 8003);
+
+-- ------------------------------------------
+-- 15. INSERT INTO customer_tbl
+-- ------------------------------------------
+INSERT INTO `customer_tbl` (`userID`, `customerID`, `customerNIC`, `companyname`, `address`) VALUES
+(11, 10001, '199123450012', 'Delmo Chicken', 'Negombo Road, Gampaha'),
+(12, 10002, '198754120015', 'Maxies Farms', 'Wennappuwa, Chilaw'),
+(13, 10003, '198501221144', 'Ruwan Dairy', 'Maradagahamula');
+
+-- ------------------------------------------
+-- 16. INSERT INTO orderhistory_tbl
+-- ------------------------------------------
+INSERT INTO `orderhistory_tbl` (`orderhistoryID`, `genaratedAt`, `daterange`, `customerID`) VALUES
+(501, '2026-07-01 10:00:00', '2026-07-01 to 2026-07-15', 10001),
+(502, '2026-07-05 11:30:00', '2026-07-05 to 2026-07-15', 10002);
+
+-- ------------------------------------------
+-- 17. INSERT INTO order_tbl
+-- ------------------------------------------
+INSERT INTO `order_tbl` (`orderID`, `date`, `totamt`, `delivered`, `cancelled`, `customerID`, `orderhistoryID`, `salessupID`, `driverID`) VALUES
+(12001, '2026-07-02', 420000.00, 1, 0, 10001, 501, 4001, 5001),
+(12002, '2026-07-06', 380000.00, 1, 0, 10002, 502, 4001, 5002),
+(12003, '2026-07-12', 35000.00, 0, 0, 10003, NULL, 4001, 5003);
+
+-- ------------------------------------------
+-- 18. INSERT INTO order_batch_tbl
+-- ------------------------------------------
+INSERT INTO `order_batch_tbl` (`batchID`, `orderID`) VALUES
+(9001, 12001),
+(9002, 12002);
+
+-- ------------------------------------------
+-- 19. INSERT INTO inquiry_tbl
+-- ------------------------------------------
+INSERT INTO `inquiry_tbl` (`inquiryID`, `message`, `response`, `pending`, `answered`, `customerID`) VALUES
+(13001, 'Need to request delivery before 8 AM for our upcoming batch of broiler feed.', 'Noted. Lorry Driver 1 will be dispatched early morning.', 0, 1, 10001);
+
+-- ------------------------------------------
+-- 20. INSERT INTO attendance_tbl
+-- ------------------------------------------
+INSERT INTO `attendance_tbl` (`attendanceID`, `date`, `login`, `logout`, `stocksupID`, `accountantID`, `salessupID`, `driverID`, `workerID`) VALUES
+(1001, '2026-07-01', '08:00:00', '17:00:00', NULL, 2001, NULL, NULL, NULL),
+(1002, '2026-07-01', '07:45:00', '16:45:00', 3001, NULL, NULL, NULL, NULL),
+(1003, '2026-07-01', '08:00:00', '17:00:00', NULL, NULL, 4001, NULL, NULL),
+(1004, '2026-07-01', '06:00:00', '19:00:00', NULL, NULL, NULL, 5001, NULL),
+(1005, '2026-07-01', '07:30:00', '16:30:00', NULL, NULL, NULL, NULL, 6001);
+
+-- ------------------------------------------
+-- 21. INSERT INTO expense_tbl
+-- ------------------------------------------
+INSERT INTO `expense_tbl` (`expenseID`, `type`, `amount`, `materialID`, `accountantID`) VALUES
+(14001, 'Stock', 400000.00, 8001, 2001),
+(14002, 'Utility', 15000.00, NULL, 2001),
+(14003, 'Salary', 195000.00, NULL, 2001);
+
+-- ------------------------------------------
+-- 22. INSERT INTO payment_tbl
+-- ------------------------------------------
+INSERT INTO `payment_tbl` (`paymentID`, `date`, `amount`, `chequenum`, `orderID`) VALUES
+(15001, '2026-07-03', 420000.00, 'CHQ9920114', 12001),
+(15002, '2026-07-07', 380000.00, 'CHQ5562130', 12002);
+
+-- ------------------------------------------
+-- 23. INSERT INTO salary_tbl
+-- ------------------------------------------
+INSERT INTO `salary_tbl` (`salaryID`, `paydate`, `totamtpaid`, `attendanceID`, `accountantID`) VALUES
+(16001, '2026-07-15', 45000.00, 1004, 2001);
+
+-- ------------------------------------------
+-- 24. INSERT INTO expensereport_tbl
+-- ------------------------------------------
+INSERT INTO `expensereport_tbl` (`expenserepID`, `genaratedAt`, `month`) VALUES
+(17001, '2026-07-15 18:00:00', '2026-07');
+
+-- ------------------------------------------
+-- 25. INSERT INTO salesreport_tbl
+-- ------------------------------------------
+INSERT INTO `salesreport_tbl` (`salesrepID`, `genaratedAt`, `month`) VALUES
+(18001, '2026-07-15 18:00:00', '2026-07');
+
+-- ------------------------------------------
+-- 26. INSERT INTO profitreport_tbl
+-- ------------------------------------------
+INSERT INTO `profitreport_tbl` (`profitrepID`, `genaratedAt`, `month`, `ownerID`) VALUES
+(19001, '2026-07-15 18:30:00', '2026-07', 1001);
+
+-- ------------------------------------------
+-- 27. INSERT INTO exp_report_tbl
+-- ------------------------------------------
+INSERT INTO `exp_report_tbl` (`expenseID`, `expenserepID`) VALUES
+(14001, 17001),
+(14002, 17001);
+
+-- ------------------------------------------
+-- 28. INSERT INTO payment_salesreport_tbl
+-- ------------------------------------------
+INSERT INTO `payment_salesreport_tbl` (`paymentID`, `salesrepID`) VALUES
+(15001, 18001),
+(15002, 18001);
+
+-- ==========================================
 -- END OF SCRIPT
--- ============================================================================
+-- ==========================================
