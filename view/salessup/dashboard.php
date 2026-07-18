@@ -54,12 +54,48 @@ if ($recentResult && $recentResult->num_rows > 0) {
     }
 }
 
-$conn->close();
+// --- START OF DYNAMIC CHART DATA ---
+$chartMonths = [];
+$chartSales = [];
+$salesMap = [];
 
-// Hardcoded 6-month trend data for the presentation diagram so it doesn't look empty
-$chartMonths = ['Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
-$chartSales = [45000, 52000, 48000, 61000, 59000, $monthlyIncome > 0 ? $monthlyIncome : 75000];
+// 1. Generate labels for the last 6 months safely (prevents day-skipping issues on 31st)
+for ($i = 5; $i >= 0; $i--) {
+    $monthLabel = date('M', strtotime(date('Y-m-01') . " -$i months"));
+    $chartMonths[] = $monthLabel;
+    $salesMap[$monthLabel] = 0; // Default to 0 so months with no sales don't break the chart
+}
+
+// 2. Fetch the real aggregated revenue from the database
+$trendQuery = "
+    SELECT 
+        DATE_FORMAT(date, '%b') AS month_label, 
+        SUM(amount) AS total_revenue 
+    FROM Payment_tbl 
+    WHERE date >= DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL 5 MONTH), '%Y-%m-01')
+    GROUP BY YEAR(date), MONTH(date), month_label
+";
+
+$trendResult = $conn->query($trendQuery);
+if ($trendResult && $trendResult->num_rows > 0) {
+    while ($row = $trendResult->fetch_assoc()) {
+        $label = $row['month_label'];
+        if (isset($salesMap[$label])) {
+            $salesMap[$label] = (float)$row['total_revenue'];
+        }
+    }
+}
+
+// 3. Transfer the mapped data to the final array in chronological order
+foreach ($chartMonths as $month) {
+    $chartSales[] = $salesMap[$month];
+}
+// --- END OF DYNAMIC CHART DATA ---
+
+// Close the connection ONLY after all queries are executed
+$conn->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
