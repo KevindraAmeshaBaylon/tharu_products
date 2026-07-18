@@ -463,11 +463,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     <div style="width: 60px; height: 3px; background-color: var(--forest-brand); margin: 0 auto 1.5rem auto; border-radius: 2px;"></div>
                     <p class="lead mb-0" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-muted) !important;">
                         Welcome to <strong class="text-dark">Tharu Products</strong>. <br>
-<<<<<<< HEAD
                         We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms with reliability and excellence.<br>
-=======
-                        We are committed to delivering high-quality, nutritious animal feed that supports healthier livestock and more productive farms. Based in <strong class="text-dark">Maradagahamula, Sri Lanka</strong>, we specialize in producing premium feed and vitamin products for <b>poultry, cattle,</b> and <b>pigs</b>,<br> serving both large-scale agricultural companies and independent farms.<br>
->>>>>>> c01c9cccd77fc290df1677c8b8519b179c1634e0
                         With years of industry experience, we source quality raw materials from trusted suppliers and transform them into carefully formulated animal feed that meets the nutritional needs of livestock.
                         <br>Our mission is simple: <strong class="text-dark">to empower the agricultural industry by providing dependable, high-quality animal feed solutions that promote healthier animals and stronger farming communities.</strong>.
                     </p>
