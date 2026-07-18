@@ -688,10 +688,10 @@ $attendanceList = $conn->query("
              WHEN d.driverID IS NOT NULL THEN 'Driver'
            END as emp_role
     FROM attendance_tbl a
-    LEFT JOIN worker_tbl w ON a.attendanceID = w.attendanceID LEFT JOIN user_tbl wu ON w.userID = wu.userID
+        LEFT JOIN Worker_tbl w ON a.workerID = w.workerID LEFT JOIN user_tbl wu ON w.userID = wu.userID
     LEFT JOIN StockSuperviser_tbl s ON a.stocksupID = s.stocksupID LEFT JOIN user_tbl su ON s.userID = su.userID
     LEFT JOIN SalesSuperviser_tbl ss ON a.salessupID = ss.salessupID LEFT JOIN user_tbl ssu ON ss.userID = ssu.userID
-    LEFT JOIN driver_tbl d ON a.attendanceID = d.attendanceID LEFT JOIN user_tbl du ON d.userID = du.userID
+        LEFT JOIN Driver_tbl d ON a.driverID = d.driverID LEFT JOIN user_tbl du ON d.userID = du.userID
     LEFT JOIN salary_tbl sal ON a.attendanceID = sal.attendanceID
     WHERE sal.salaryID IS NULL 
       AND (w.workerID IS NOT NULL OR s.stocksupID IS NOT NULL OR ss.salessupID IS NOT NULL OR d.driverID IS NOT NULL)
