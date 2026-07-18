@@ -154,9 +154,17 @@ $userID = $_SESSION['user_id'];
 // Default viewing module
 $viewTab = $_GET['view'] ?? 'overview';
 
-// Fetch Current User Details
-$userStmt = $conn->prepare("SELECT username, email FROM User_tbl WHERE userID = ?");
-$userStmt->bind_param("i", $userID);
+// 1. RESOLVE USER ID TO CUSTOMER ID
+$custQuery = $conn->prepare("SELECT customerID, companyname, address FROM customer_tbl WHERE userID = ?");
+$custQuery->bind_param("i", $loggedInUserID);
+$custQuery->execute();
+$customerProfile = $custQuery->get_result()->fetch_assoc();
+
+$customerID = $customerProfile['customerID'] ?? 0;
+
+// Fetch User Login Details for the profile view
+$userStmt = $conn->prepare("SELECT username, email FROM user_tbl WHERE userID = ?");
+$userStmt->bind_param("i", $loggedInUserID);
 $userStmt->execute();
 $userProfile = $userStmt->get_result()->fetch_assoc();
 
@@ -191,14 +199,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         
         $conn->begin_transaction();
         try {
-            // 1. Insert Order
-            $orderQuery = "INSERT INTO Order_tbl (userID, totamtpaid, shipping_address, payment_method, status) VALUES (?, ?, ?, ?, 'Pending')";
-            $orderStmt = $conn->prepare($orderQuery);
-            $orderStmt->bind_param("idss", $userID, $totalAmount, $address, $paymentMethod);
+            $orderQueryIns = "INSERT INTO order_tbl (customerID, date, totamt, delivered, cancelled) VALUES (?, CURDATE(), ?, 0, 0)";
+            $orderStmt = $conn->prepare($orderQueryIns);
+            if ($orderStmt === false) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+            
+            $orderStmt->bind_param("id", $customerID, $totalAmount);
             $orderStmt->execute();
-            $orderID = $conn->insert_id;
+            $orderID = $orderStmt->insert_id;
 
-            // 2. Clear out checkout staging sessions
             $_SESSION['cart'] = [];
             $conn->commit();
             $successMsg = "Order placed successfully! Order Reference ID: #ORD-" . $orderID;
@@ -272,25 +282,36 @@ if (isset($_GET['success'])) {
 =======
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f4f7f6;
-            color: #1e293b;
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f7f6; color: #1e293b; }
+        .sidebar { height: 100vh; background: #042f22; color: #fff; padding-top: 1.5rem; position: sticky; top: 0; }
+        .sidebar-brand { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.5rem 1rem; color: #fff; display: flex; align-items: center; }
+        .sidebar .nav-link { 
+            color: rgba(255,255,255,0.75); 
+            margin: 0.4rem 1rem; 
+            border-radius: 12px; 
+            padding: 12px 16px; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            transition: all 0.2s ease-in-out;
         }
-        .sidebar {
-            height: 100vh;
-            background: #042f22;
-            color: #fff;
-            padding-top: 2rem;
+        .sidebar .nav-link i { font-size: 1.2rem; margin-right: 12px; }
+        .sidebar .nav-link:hover { background: rgba(16, 185, 129, 0.15); color: #fff; }
+        .sidebar .nav-link.active { 
+            background: #134e38; 
+            color: #ffffff; 
+            position: relative; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .sidebar .nav-link {
-            color: rgba(255,255,255,0.75);
-            margin: 0.5rem 1rem;
-            border-radius: 8px;
-        }
-        .sidebar .nav-link.active, .sidebar .nav-link:hover {
-            background: #10b981;
-            color: #fff;
+        .sidebar .nav-link.active::before { 
+            content: ""; 
+            position: absolute; 
+            left: 0; 
+            top: 15%; 
+            height: 70%; 
+            width: 4px; 
+            background: #10b981; 
+            border-radius: 0 4px 4px 0; 
         }
         .dashboard-container {
             background: #ffffff;
@@ -437,75 +458,118 @@ if (isset($_GET['success'])) {
             </div>
         </div>
 
-        <!-- Dashboard Content pane -->
-        <div class="col-md-9 col-lg-10 px-md-4">
+        <!-- Dashboard Panel Content -->
+        <div class="col-md-9 col-lg-10 px-md-4 ms-auto">
             <div class="dashboard-container">
                 <?php if (isset($successMsg)): ?>
-                    <div class="alert alert-success"><?= $successMsg ?></div>
+                    <div class="alert alert-success no-print"><?= $successMsg ?></div>
                 <?php endif; ?>
                 <?php if (isset($errorMsg)): ?>
-                    <div class="alert alert-danger"><?= $errorMsg ?></div>
+                    <div class="alert alert-danger no-print"><?= $errorMsg ?></div>
+                <?php endif; ?>
+                <?php if (isset($_GET['status']) && $_GET['status'] === 'cart_updated'): ?>
+                    <div class="alert alert-info no-print">Quantities updated inside your shopping cart.</div>
+                <?php endif; ?>
+                <?php if (isset($_GET['status']) && $_GET['status'] === 'cancelled'): ?>
+                    <div class="alert alert-warning no-print">Order state updated to Cancelled.</div>
                 <?php endif; ?>
 
+                <!-- TAB 1: OVERVIEW -->
                 <?php if ($viewTab === 'overview'): ?>
-                    <h3>Welcome back, <?= htmlspecialchars($userProfile['username'] ?? 'User') ?>!</h3>
-                    <p class="text-muted">Manage your livestock supply orders and manage accounts from this panel.</p>
+                    <h3 class="fw-bold text-dark">Welcome back, <?= htmlspecialchars($userProfile['username'] ?? 'User') ?>!</h3>
+                    <p class="text-secondary">Manage your livestock supply orders and manage accounts from this panel.</p>
                     <hr>
-                    <div class="row g-3 mt-3">
-                        <div class="col-md-6">
-                            <div class="p-4 bg-light rounded border">
-                                <h5>Account Information</h5>
-                                <p class="mb-1"><strong>Email:</strong> <?= htmlspecialchars($userProfile['email'] ?? 'Not Assigned') ?></p>
-                            </div>
-                        </div>
+                    <div class="p-4 bg-light rounded border col-md-6">
+                        <h5 class="fw-bold text-dark mb-3">Account Information</h5>
+                        <p class="mb-1 text-secondary"><strong>Company:</strong> <span class="text-dark"><?= htmlspecialchars($customerProfile['companyname'] ?? 'Not Assigned') ?></span></p>
+                        <p class="mb-1 text-secondary"><strong>Email:</strong> <span class="text-dark"><?= htmlspecialchars($userProfile['email'] ?? 'Not Assigned') ?></span></p>
+                        <p class="mb-1 text-secondary"><strong>Address:</strong> <span class="text-dark"><?= htmlspecialchars($customerProfile['address'] ?? 'Not Assigned') ?></span></p>
                     </div>
 
-                <?php elseif ($viewTab === 'checkout'): ?>
-                    <h3>Complete Checkout & Make Payment</h3>
-                    <p class="text-muted">Review items staging inside your cart session to initiate feed procurement procedures.</p>
+                <!-- TAB 2: CATALOG -->
+                <?php elseif ($viewTab === 'catalog'): ?>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="fw-bold text-dark m-0">Animal Feed Catalog</h3>
+                        <form method="GET" class="d-flex gap-2">
+                            <input type="hidden" name="view" value="catalog">
+                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search products..." value="<?= htmlspecialchars($search) ?>">
+                            <button type="submit" class="btn btn-sm btn-forest">Search</button>
+                            <?php if (!empty($search)): ?>
+                                <a href="?view=catalog" class="btn btn-sm btn-secondary">Clear</a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
                     <hr>
+                    <div class="row g-3">
+                        <?php if (!empty($products)): ?>
+                            <?php foreach ($products as $product): ?>
+                                <div class="col-md-4">
+                                    <div class="card h-100 shadow-sm border-0 p-2 bg-light">
+                                        <div class="card-body d-flex flex-column">
+                                            <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($product['name']) ?></h5>
+                                            <p class="text-secondary small mb-3"><?= htmlspecialchars($product['description']) ?></p>
+                                            <div class="mt-auto">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="text-secondary small">Unit Price</span>
+                                                    <span class="fw-bold text-emerald">LKR <?= number_format($product['unitprice'], 2) ?></span>
+                                                </div>
+                                                <form action="cust_dashboard.php?action=add_to_cart" method="POST">
+                                                    <input type="hidden" name="product_id" value="<?= $product['productID'] ?>">
+                                                    <div class="input-group input-group-sm mb-2">
+                                                        <span class="input-group-text bg-white text-secondary">Qty</span>
+                                                        <input type="number" name="quantity" class="form-control text-center text-dark" value="<?= $_SESSION['cart'][$product['productID']] ?? 1 ?>" min="1">
+                                                    </div>
+                                                    <button type="submit" class="btn btn-forest btn-sm w-100">Add / Update Cart</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="text-center text-secondary py-4">No feed items match your request parameters.</div>
+                        <?php endif; ?>
+                    </div>
 
+                <!-- TAB 3: CHECKOUT -->
+                <?php elseif ($viewTab === 'checkout'): ?>
+                    <h3 class="fw-bold text-dark">Complete Checkout & Confirm Order</h3>
+                    <p class="text-secondary">Review items staging inside your cart session to calculate total bill values.</p>
+                    <hr>
                     <?php if (empty($_SESSION['cart'])): ?>
-                        <div class="alert alert-info text-center py-4">
-                            Your checkout queue is currently empty. <a href="../index.php">Go back and select some items</a>.
-                        </div>
+                        <div class="alert alert-info text-center py-4">Your staging cart queue is empty. <a href="?view=catalog" class="text-emerald fw-semibold">Browse the Product Catalog</a>.</div>
                     <?php else: ?>
                         <div class="row g-4">
                             <div class="col-md-7">
-                                <form method="POST">
-                                    <h5 class="mb-3">Shipping & Payment Form</h5>
-                                    
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold">Shipping / Delivery Address</label>
-                                        <textarea class="form-control" name="shipping_address" rows="3" placeholder="Enter full delivery coordinates..." required></textarea>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold">Payment Method</label>
-                                        <select class="form-select" name="payment_method" required>
-                                            <option value="Bank Transfer">Bank Wire Transfer</option>
-                                            <option value="Cash on Delivery">Cash on Delivery</option>
-                                        </select>
-                                    </div>
-
+                                <form action="cust_dashboard.php?action=update_cart" method="POST" class="mb-4 bg-light p-3 rounded border">
+                                    <h6 class="fw-bold text-dark mb-3">Adjust Quantities</h6>
                                     <?php 
                                     $checkoutTotal = 0;
-                                    foreach($_SESSION['cart'] as $id => $qty) {
-                                        $pStmt = $conn->prepare("SELECT unitprice FROM product_tbl WHERE productID = ?");
+                                    foreach($_SESSION['cart'] as $id => $qty): 
+                                        $pStmt = $conn->prepare("SELECT name, unitprice FROM product_tbl WHERE productID = ?");
                                         $pStmt->bind_param("i", $id);
                                         $pStmt->execute();
-                                        $res = $pStmt->get_result()->fetch_assoc();
-                                        $checkoutTotal += ($res['unitprice'] ?? 0) * $qty;
-                                    }
+                                        $prod = $pStmt->get_result()->fetch_assoc();
+<<<<<<< HEAD
+                                        $checkoutTotal += ($prod['unitprice'] ?? 0) * $qty;
                                     ?>
-                                    <input type="hidden" name="total_amount" value="<?= $checkoutTotal ?>">
+                                        <div class="row align-items-center mb-2 small">
+                                            <div class="col-6 text-dark fw-medium"><?= htmlspecialchars($prod['name']) ?></div>
+                                            <div class="col-4">
+                                                <input type="number" name="quantities[<?= $id ?>]" class="form-control form-control-sm text-center text-dark" value="<?= $qty ?>" min="0">
+                                            </div>
+                                            <div class="col-2 text-end text-secondary fw-medium">LKR <?= number_format($prod['unitprice'] * $qty, 2) ?></div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <button type="submit" class="btn btn-sm btn-secondary w-100 mt-2">Update Cart Quantities</button>
+                                </form>
 
-                                    <button type="submit" name="place_order" class="btn btn-forest w-100 py-3">
-                                        Confirm Payment & Place Order (LKR <?= number_format($checkoutTotal, 2) ?>)
-                                    </button>
+                                <form method="POST">
+                                    <input type="hidden" name="total_amount" value="<?= $checkoutTotal ?>">
+                                    <button type="submit" name="place_order" class="btn btn-forest w-100 py-3 fw-bold">Confirm Payment & Place Order</button>
                                 </form>
                             </div>
-
+                            
                             <div class="col-md-5">
                                 <div class="p-3 bg-light rounded border">
                                     <h6 class="fw-bold mb-3">Order Summary</h6>
