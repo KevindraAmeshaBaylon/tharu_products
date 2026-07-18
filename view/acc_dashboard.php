@@ -1065,7 +1065,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         <div class="tab-content" id="acctTabContent">
             <div class="tab-pane fade <?= $active_tab === 'payroll' ? 'show active' : '' ?>" id="payroll" role="tabpanel" aria-labelledby="payroll-tab">
                 <div class="card border-0 shadow-sm p-4 rounded-4 mb-4">
-                    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-calculator-fill me-2 text-success"></i>Salary Calculator Portal</h4>
+                    <h4 class="fw-bold text-dark mb-1">Salary Calculator Portal</h4>
                     <p class="text-muted small mb-4">Add salary and salary-related payments (OT, holiday bonuses) for permanent and daily workers.</p>
 
                     <form action="" method="POST" id="salaryForm">
@@ -1282,7 +1282,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
 
             <div class="tab-pane fade <?= $active_tab === 'salaryLedger' ? 'show active' : '' ?>" id="salaryLedger" role="tabpanel" aria-labelledby="salaryLedger-tab">
                 <div class="card p-4 content-section">
-                    <h4 class="fw-bold mb-4 text-success">Salary Distribution Summary</h4>
+                    <h4 class="fw-bold mb-4 text-dark">Salary Distribution Summary</h4>
                     <p class="text-muted small mb-4">Monthly salary overview for all employees, grouped by role.</p>
 
                     <!-- Stock Supervisors Section -->
@@ -1465,7 +1465,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             <!-- Reports Tab -->
             <div class="tab-pane fade <?= $active_tab === 'reports' ? 'show active' : '' ?>" id="reports" role="tabpanel" aria-labelledby="reports-tab">
                 <div class="card p-4 content-section">
-                    <h4 class="fw-bold mb-3 text-dark"><i class="bi bi-graph-up me-2"></i>Monthly Expense Report Generator</h4>
+                    <h4 class="fw-bold mb-3 text-dark">Monthly Expense Report Generator</h4>
                     <p class="text-muted small mb-4">Generate detailed monthly expense reports with export options.</p>
 
                     <!-- Report Generator Form -->

@@ -368,7 +368,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <form action="" method="POST">
                 <input type="hidden" name="action" value="signup">
                 <h2>Join Us</h2>
-                <p class="mb-4 text-muted small">Register your new system access profile.</p>
+                <p class="mb-4 text-muted small">Register your new user profile.</p>
                 
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control form-control-glass" placeholder="Username" required autocomplete="off">
@@ -393,7 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <form action="" method="POST">
                 <input type="hidden" name="action" value="signin">
                 <h2>Welcome</h2>
-                <p class="mb-4 text-muted small">Access your localized dashboard matrix.</p>
+                <p class="mb-4 text-muted small">Access your personalized workspace.</p>
                 
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control form-control-glass" placeholder="Username / Email" required autocomplete="off">

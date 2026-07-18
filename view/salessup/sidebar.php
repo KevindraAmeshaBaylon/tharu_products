@@ -175,7 +175,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div style="position: relative; z-index: 1;">
         <div class="d-flex align-items-center gap-2 px-2 mb-4">
             <img src="../../images/LOGO.png" alt="Tharu Logo" style="height: 80px; width: auto; border-radius: 5px;">
-            <h5 class="fw-bold mb-0 text-white font-monospace">SALES SUPERVISOR</h5>
+            <h5 class="fw-bold mb-0 text-white font-monospace">THARU SALES SUPERVISOR</h5>
         </div>
         <hr style="border-color: rgba(255,255,255,0.1);">
         
