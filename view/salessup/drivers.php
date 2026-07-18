@@ -3,6 +3,13 @@ session_start();
 
 // Include database
 require_once '../../model/config/database.php';
+
+// STRICT AUTHENTICATION GUARD (Preserved exactly as requested)
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'salessup') {
+    header("Location: ../../auth/login.php");
+    exit;
+}
+
 $conn = getDBConnection();
 
 // --- VERY BASIC BACKEND LOGIC FOR CRUD OPERATIONS ---
