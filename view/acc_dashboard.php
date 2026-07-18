@@ -34,7 +34,7 @@ $dashboardActionTabMap = [
     'export_report' => 'reports'
 ];
 
-function normalizeDashboardTab($tabId, $validTabs, $aliases, $fallbackTab = 'payroll') {
+function normalizeDashboardTab($tabId, $validTabs, $aliases, $fallbackTab = 'attendanceTab') {
     if (!is_string($tabId) || $tabId === '') {
         return $fallbackTab;
     }
@@ -80,7 +80,7 @@ $error_message = '';
 $success_message = '';
 $action = $_POST['action'] ?? '';
 $requestedTab = $_GET['tab_id'] ?? ($_POST['tab_id'] ?? '');
-$defaultTab = $dashboardActionTabMap[$action] ?? 'payroll';
+$defaultTab = $dashboardActionTabMap[$action] ?? 'attendanceTab';
 $active_tab = normalizeDashboardTab($requestedTab, $dashboardTabs, $dashboardTabAliases, $defaultTab);
 
 if ($action !== '' && isset($dashboardActionTabMap[$action])) {
