@@ -230,11 +230,13 @@ if (isset($_GET['success'])) {
 <div class="container-fluid">
     <div class="row">
         <!-- Sidebar Navigation -->
-        <div class="col-md-3 col-lg-2 sidebar no-print px-2">
+        <div class="col-md-3 col-lg-2 sidebar no-print px-2 d-flex flex-column">
             <div class="sidebar-brand mb-4 px-3 d-flex align-items-center">
                 <span class="me-2 fs-4">🌾</span> <span class="fw-bold text-white fs-6">Customer</span>
             </div>
-            <div class="nav flex-column">
+            
+            <!-- Navigation links grow to fill top space -->
+            <div class="nav flex-column flex-grow-1">
                 <a href="?view=overview" class="nav-link <?= $viewTab === 'overview' ? 'active' : '' ?>">
                     <i class="bi bi-speedometer2"></i> Overview
                 </a>
@@ -253,7 +255,11 @@ if (isset($_GET['success'])) {
                 <a href="?view=inquiry" class="nav-link <?= $viewTab === 'inquiry' ? 'active' : '' ?>">
                     <i class="bi bi-chat-left-text-fill"></i> Send Inquiry
                 </a>
-                <a href="../auth/logout.php" class="nav-link text-danger mt-5">
+            </div>
+
+            <!-- Logout button pinned to bottom -->
+            <div class="mt-auto">
+                <a href="../auth/logout.php" class="nav-link text-danger mb-3">
                     <i class="bi bi-box-arrow-right"></i> Log Out
                 </a>
             </div>
