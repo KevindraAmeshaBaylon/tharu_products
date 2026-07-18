@@ -1,5 +1,4 @@
 <?php
-<<<<<<< HEAD
 // view/cust_dashboard.php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -12,19 +11,11 @@ if (isset($_SESSION['user_id']) && !isset($_SESSION['userID'])) {
 
 // AUTHENTICATION GUARD
 if (!isset($_SESSION['userID']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'cust') {
-=======
-// auth/customer_dashboard.php
-session_start();
-require_once __DIR__ . '/../model/config/database.php';
-
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'cust') {
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
     header("Location: ../auth/login.php");
     exit;
 }
 
 $conn = getDBConnection();
-<<<<<<< HEAD
 $loggedInUserID = $_SESSION['userID']; 
 $viewTab = $_GET['view'] ?? 'overview';
 
@@ -148,33 +139,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_inquiry'])) {
 }
 
 // 8. ACTION: PLACE AND CONFIRM ORDER
-=======
-$userID = $_SESSION['user_id'];
-
-// Default viewing module
-$viewTab = $_GET['view'] ?? 'overview';
-
-// 1. RESOLVE USER ID TO CUSTOMER ID
-$custQuery = $conn->prepare("SELECT customerID, companyname, address FROM customer_tbl WHERE userID = ?");
-$custQuery->bind_param("i", $loggedInUserID);
-$custQuery->execute();
-$customerProfile = $custQuery->get_result()->fetch_assoc();
-
-$customerID = $customerProfile['customerID'] ?? 0;
-
-// Fetch User Login Details for the profile view
-$userStmt = $conn->prepare("SELECT username, email FROM user_tbl WHERE userID = ?");
-$userStmt->bind_param("i", $loggedInUserID);
-$userStmt->execute();
-$userProfile = $userStmt->get_result()->fetch_assoc();
-
-// Handle Order Placement & Payment Logic
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $cart = $_SESSION['cart'] ?? [];
     if (!empty($cart)) {
         $totalAmount = floatval($_POST['total_amount']);
-<<<<<<< HEAD
         
         $conn->begin_transaction();
         try {
@@ -193,40 +161,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             
             header("Location: cust_dashboard.php?view=history&success=1&ref=" . $orderID);
             exit;
-=======
-        $address = htmlspecialchars($_POST['shipping_address']);
-        $paymentMethod = htmlspecialchars($_POST['payment_method']);
-        
-        $conn->begin_transaction();
-        try {
-            $orderQueryIns = "INSERT INTO order_tbl (customerID, date, totamt, delivered, cancelled) VALUES (?, CURDATE(), ?, 0, 0)";
-            $orderStmt = $conn->prepare($orderQueryIns);
-            if ($orderStmt === false) {
-                throw new Exception("Prepare failed: " . $conn->error);
-            }
-            
-            $orderStmt->bind_param("id", $customerID, $totalAmount);
-            $orderStmt->execute();
-            $orderID = $orderStmt->insert_id;
-
-            $_SESSION['cart'] = [];
-            $conn->commit();
-            $successMsg = "Order placed successfully! Order Reference ID: #ORD-" . $orderID;
-            $viewTab = 'history';
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
         } catch (Exception $e) {
             $conn->rollback();
             $errorMsg = "Order placement transaction failed: " . $e->getMessage();
         }
     }
 }
-<<<<<<< HEAD
 
 if (isset($_GET['success'])) {
     $successMsg = "Order confirmed and placed successfully! Ref ID: #ORD-" . intval($_GET['ref']);
 }
-=======
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
 ?>
 
 <!DOCTYPE html>
@@ -235,7 +179,6 @@ if (isset($_GET['success'])) {
     <meta charset="UTF-8">
     <title>Customer Dashboard | Tharu Products</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-<<<<<<< HEAD
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -279,47 +222,6 @@ if (isset($_GET['success'])) {
             .no-print { display: none !important; }
             .sidebar { display: none !important; }
             .dashboard-container { box-shadow: none; margin: 0; padding: 0; width: 100%; max-width: 100%; }
-=======
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f7f6; color: #1e293b; }
-        .sidebar { height: 100vh; background: #042f22; color: #fff; padding-top: 1.5rem; position: sticky; top: 0; }
-        .sidebar-brand { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; padding: 0.5rem 1rem; color: #fff; display: flex; align-items: center; }
-        .sidebar .nav-link { 
-            color: rgba(255,255,255,0.75); 
-            margin: 0.4rem 1rem; 
-            border-radius: 12px; 
-            padding: 12px 16px; 
-            font-weight: 500; 
-            display: flex; 
-            align-items: center; 
-            transition: all 0.2s ease-in-out;
-        }
-        .sidebar .nav-link i { font-size: 1.2rem; margin-right: 12px; }
-        .sidebar .nav-link:hover { background: rgba(16, 185, 129, 0.15); color: #fff; }
-        .sidebar .nav-link.active { 
-            background: #134e38; 
-            color: #ffffff; 
-            position: relative; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .sidebar .nav-link.active::before { 
-            content: ""; 
-            position: absolute; 
-            left: 0; 
-            top: 15%; 
-            height: 70%; 
-            width: 4px; 
-            background: #10b981; 
-            border-radius: 0 4px 4px 0; 
-        }
-        .dashboard-container {
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            padding: 2.5rem;
-            margin-top: 2rem;
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
         }
     </style>
 </head>
@@ -327,7 +229,6 @@ if (isset($_GET['success'])) {
 
 <div class="container-fluid">
     <div class="row">
-<<<<<<< HEAD
         <!-- Sidebar Navigation -->
         <div class="col-md-3 col-lg-2 sidebar no-print px-2">
             <div class="sidebar-brand mb-4 px-3 d-flex align-items-center">
@@ -446,140 +347,10 @@ if (isset($_GET['success'])) {
                                     <?php 
                                     $checkoutTotal = 0;
                                     foreach($_SESSION['cart'] as $id => $qty): 
-=======
-        <!-- Dashboard Left Sidebar -->
-        <div class="col-md-3 col-lg-2 sidebar">
-            <h5 class="text-center fw-bold mb-4">🌾 MY PORTAL</h5>
-            <div class="nav flex-column nav-pills">
-                <a href="?view=overview" class="nav-link <?= $viewTab === 'overview' ? 'active' : '' ?>">Overview</a>
-                <a href="?view=checkout" class="nav-link <?= $viewTab === 'checkout' ? 'active' : '' ?>">Place Order & Pay</a>
-                <a href="../index.php" class="nav-link">Back to Catalog</a>
-                <a href="logout.php" class="nav-link text-danger mt-5">Log Out</a>
-            </div>
-        </div>
-
-        <!-- Dashboard Panel Content -->
-        <div class="col-md-9 col-lg-10 px-md-4 ms-auto">
-            <div class="dashboard-container">
-                <?php if (isset($successMsg)): ?>
-                    <div class="alert alert-success no-print"><?= $successMsg ?></div>
-                <?php endif; ?>
-                <?php if (isset($errorMsg)): ?>
-                    <div class="alert alert-danger no-print"><?= $errorMsg ?></div>
-                <?php endif; ?>
-                <?php if (isset($_GET['status']) && $_GET['status'] === 'cart_updated'): ?>
-                    <div class="alert alert-info no-print">Quantities updated inside your shopping cart.</div>
-                <?php endif; ?>
-                <?php if (isset($_GET['status']) && $_GET['status'] === 'cancelled'): ?>
-                    <div class="alert alert-warning no-print">Order state updated to Cancelled.</div>
-                <?php endif; ?>
-
-                <!-- TAB 1: OVERVIEW -->
-                <?php if ($viewTab === 'overview'): ?>
-                    <h3 class="fw-bold text-dark">Welcome back, <?= htmlspecialchars($userProfile['username'] ?? 'User') ?>!</h3>
-                    <p class="text-secondary">Manage your livestock supply orders and manage accounts from this panel.</p>
-                    <hr>
-                    <div class="p-4 bg-light rounded border col-md-6">
-                        <h5 class="fw-bold text-dark mb-3">Account Information</h5>
-                        <p class="mb-1 text-secondary"><strong>Company:</strong> <span class="text-dark"><?= htmlspecialchars($customerProfile['companyname'] ?? 'Not Assigned') ?></span></p>
-                        <p class="mb-1 text-secondary"><strong>Email:</strong> <span class="text-dark"><?= htmlspecialchars($userProfile['email'] ?? 'Not Assigned') ?></span></p>
-                        <p class="mb-1 text-secondary"><strong>Address:</strong> <span class="text-dark"><?= htmlspecialchars($customerProfile['address'] ?? 'Not Assigned') ?></span></p>
-                    </div>
-
-                <!-- TAB 2: CATALOG -->
-                <?php elseif ($viewTab === 'catalog'): ?>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="fw-bold text-dark m-0">Animal Feed Catalog</h3>
-                        <form method="GET" class="d-flex gap-2">
-                            <input type="hidden" name="view" value="catalog">
-                            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search products..." value="<?= htmlspecialchars($search) ?>">
-                            <button type="submit" class="btn btn-sm btn-forest">Search</button>
-                            <?php if (!empty($search)): ?>
-                                <a href="?view=catalog" class="btn btn-sm btn-secondary">Clear</a>
-                            <?php endif; ?>
-                        </form>
-                    </div>
-                    <hr>
-                    <div class="row g-3">
-                        <?php if (!empty($products)): ?>
-                            <?php foreach ($products as $product): ?>
-                                <div class="col-md-4">
-                                    <div class="card h-100 shadow-sm border-0 p-2 bg-light">
-                                        <div class="card-body d-flex flex-column">
-                                            <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($product['name']) ?></h5>
-                                            <p class="text-secondary small mb-3"><?= htmlspecialchars($product['description']) ?></p>
-                                            <div class="mt-auto">
-                                                <div class="d-flex justify-content-between mb-2">
-                                                    <span class="text-secondary small">Unit Price</span>
-                                                    <span class="fw-bold text-emerald">LKR <?= number_format($product['unitprice'], 2) ?></span>
-                                                </div>
-                                                <form action="cust_dashboard.php?action=add_to_cart" method="POST">
-                                                    <input type="hidden" name="product_id" value="<?= $product['productID'] ?>">
-                                                    <div class="input-group input-group-sm mb-2">
-                                                        <span class="input-group-text bg-white text-secondary">Qty</span>
-                                                        <input type="number" name="quantity" class="form-control text-center text-dark" value="<?= $_SESSION['cart'][$product['productID']] ?? 1 ?>" min="1">
-                                                    </div>
-                                                    <button type="submit" class="btn btn-forest btn-sm w-100">Add / Update Cart</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="text-center text-secondary py-4">No feed items match your request parameters.</div>
-                        <?php endif; ?>
-                    </div>
-
-                <!-- TAB 3: CHECKOUT -->
-                <?php elseif ($viewTab === 'checkout'): ?>
-                    <h3 class="fw-bold text-dark">Complete Checkout & Confirm Order</h3>
-                    <p class="text-secondary">Review items staging inside your cart session to calculate total bill values.</p>
-                    <hr>
-                    <?php if (empty($_SESSION['cart'])): ?>
-                        <div class="alert alert-info text-center py-4">Your staging cart queue is empty. <a href="?view=catalog" class="text-emerald fw-semibold">Browse the Product Catalog</a>.</div>
-                    <?php else: ?>
-                        <div class="row g-4">
-                            <div class="col-md-7">
-                                <form action="cust_dashboard.php?action=update_cart" method="POST" class="mb-4 bg-light p-3 rounded border">
-                                    <h6 class="fw-bold text-dark mb-3">Adjust Quantities</h6>
-                                    <?php 
-                                    $checkoutTotal = 0;
-                                    foreach($_SESSION['cart'] as $id => $qty): 
                                         $pStmt = $conn->prepare("SELECT name, unitprice FROM product_tbl WHERE productID = ?");
                                         $pStmt->bind_param("i", $id);
                                         $pStmt->execute();
                                         $prod = $pStmt->get_result()->fetch_assoc();
-<<<<<<< HEAD
-                                        $checkoutTotal += ($prod['unitprice'] ?? 0) * $qty;
-                                    ?>
-                                        <div class="row align-items-center mb-2 small">
-                                            <div class="col-6 text-dark fw-medium"><?= htmlspecialchars($prod['name']) ?></div>
-                                            <div class="col-4">
-                                                <input type="number" name="quantities[<?= $id ?>]" class="form-control form-control-sm text-center text-dark" value="<?= $qty ?>" min="0">
-                                            </div>
-                                            <div class="col-2 text-end text-secondary fw-medium">LKR <?= number_format($prod['unitprice'] * $qty, 2) ?></div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                    <button type="submit" class="btn btn-sm btn-secondary w-100 mt-2">Update Cart Quantities</button>
-                                </form>
-
-                                <form method="POST">
-                                    <input type="hidden" name="total_amount" value="<?= $checkoutTotal ?>">
-                                    <button type="submit" name="place_order" class="btn btn-forest w-100 py-3 fw-bold">Confirm Payment & Place Order</button>
-                                </form>
-                            </div>
-                            
-                            <div class="col-md-5">
-                                <div class="p-3 bg-light rounded border">
-                                    <h6 class="fw-bold mb-3">Order Summary</h6>
-                                    <?php foreach($_SESSION['cart'] as $id => $qty): 
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
-                                        $pStmt = $conn->prepare("SELECT name, unitprice FROM product_tbl WHERE productID = ?");
-                                        $pStmt->bind_param("i", $id);
-                                        $pStmt->execute();
-                                        $prod = $pStmt->get_result()->fetch_assoc();
-<<<<<<< HEAD
                                         $checkoutTotal += ($prod['unitprice'] ?? 0) * $qty;
                                     ?>
                                         <div class="row align-items-center mb-2 small">
@@ -606,19 +377,10 @@ if (isset($_GET['success'])) {
                                         <span class="text-light">Total Bill:</span>
                                         <strong class="text-emerald">LKR <?= number_format($checkoutTotal, 2) ?></strong>
                                     </div>
-=======
-                                    ?>
-                                        <div class="d-flex justify-content-between small border-bottom py-2">
-                                            <span><?= htmlspecialchars($prod['name']) ?> (x<?= $qty ?>)</span>
-                                            <strong>LKR <?= number_format($prod['unitprice'] * $qty, 2) ?></strong>
-                                        </div>
-                                    <?php endforeach; ?>
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
                                 </div>
                             </div>
                         </div>
                     <?php endif; ?>
-<<<<<<< HEAD
 
                 <!-- TAB 4: ORDER HISTORY -->
                 <?php elseif ($viewTab === 'history'): ?>
@@ -764,20 +526,11 @@ if (isset($_GET['success'])) {
                     </form>
                 <?php endif; ?>
 
-=======
-                <?php endif; ?>
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
             </div>
         </div>
     </div>
 </div>
 
-<<<<<<< HEAD
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-<!--this is the edited final code of customer dashboard-->
-=======
-</body>
-</html>
->>>>>>> 99e45334fe6e514a574dec58878479467efe7d5f
