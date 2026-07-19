@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SE
 $conn = getDBConnection();
 
 // --- VERY BASIC BACKEND LOGIC ---
-// Simple SELECT query to get ONLY dispatched items as "Sold Units"
+// grabbing only the orders that are actually dispatched and out the door
 $sql = "SELECT 
             o.orderID,
             o.date AS order_date,
@@ -32,6 +32,7 @@ $sql = "SELECT
 $result = $conn->query($sql);
 
 // Arrays to store chart data dynamically
+// setting up some empty buckets to hold our chart info
 $chartLabels = [];
 $chartData = [];
 $tableRows = [];
@@ -43,6 +44,7 @@ if ($result && $result->num_rows > 0) {
         $totalSold += $row['sold_quantity'];
         
         // Structure data for product summary chart distribution
+        // keeping a running total of how many of each product we sold for the pie chart
         $pName = $row['product_name'];
         if (isset($chartData[$pName])) {
             $chartData[$pName] += $row['sold_quantity'];
@@ -53,6 +55,7 @@ if ($result && $result->num_rows > 0) {
 }
 
 // Convert PHP structure to clean array keys for the JavaScript chart
+// Javascript needs these separated into labels and values, so we split them here
 $chartLabels = array_keys($chartData);
 $chartValues = array_values($chartData);
 
@@ -211,6 +214,7 @@ $conn->close();
 
 <script>
     // Grab processed variables from PHP logic engine safely
+    // passing the data we got from PHP into Javascript so Chart.js can draw the pie chart
     const labelsArray = <?php echo json_encode($chartLabels); ?>;
     const valuesArray = <?php echo json_encode($chartValues); ?>;
 

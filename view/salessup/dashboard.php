@@ -4,6 +4,7 @@ session_start();
 require_once '../../model/config/database.php';
 
 // STRICT AUTHENTICATION GUARD (Preserved exactly as requested)
+// basically just making sure they are logged in and actually a sales supervisor
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'salessup') {
     header("Location: ../../auth/login.php");
     exit;
@@ -12,7 +13,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SE
 
 $conn = getDBConnection();
 
-// Initialize metrics
+// setting up variables for our top boxes
 $totalOrders = 0;
 $pendingOrders = 0;
 $processingOrders = 0;
@@ -20,7 +21,8 @@ $dispatchedOrders = 0;
 $soldUnits = 0;
 $monthlyIncome = 0;
 
-// Fetch Processing Orders (Orders linked to batches currently in production)
+// figure out how many orders are currently being made in the factory
+// we have to join a few tables to find batches that are in production
 $procQuery = "
     SELECT COUNT(DISTINCT o.orderID) 
     FROM order_tbl o 
@@ -32,7 +34,7 @@ if ($procResult = $conn->query($procQuery)) {
     $processingOrders = $procResult->fetch_row()[0];
 }
 
-// Fetch Dispatched Orders (Orders linked to dispatched batches, not yet delivered)
+// find out how many orders are sent out but not delivered yet
 $dispQuery = "
     SELECT COUNT(DISTINCT o.orderID) 
     FROM order_tbl o 
@@ -44,7 +46,7 @@ if ($dispResult = $conn->query($dispQuery)) {
     $dispatchedOrders = $dispResult->fetch_row()[0];
 }
 
-// Fetch Sold Units (Dispatched) (Sum of output quantity from dispatched batches)
+// total units we actually managed to sell and dispatch
 $unitsQuery = "
     SELECT SUM(outputqty) 
     FROM productionbatch_tbl 
@@ -54,19 +56,19 @@ if ($unitsResult = $conn->query($unitsQuery)) {
     $soldUnits = $unitsResult->fetch_row()[0] ?: 0;
 }
 
-// Fetch Total Orders
+// just a straight count of every order we have
 $result = $conn->query("SELECT COUNT(*) FROM Order_tbl");
 if ($result) {
     $totalOrders = $result->fetch_row()[0];
 }
 
-// Fetch Pending Orders
+// how many orders are still waiting around (not delivered or cancelled)
 $result = $conn->query("SELECT COUNT(*) FROM Order_tbl WHERE delivered = 0 AND cancelled = 0");
 if ($result) {
     $pendingOrders = $result->fetch_row()[0];
 }
 
-// Fetch Monthly Income
+// total cash we made this month
 $result = $conn->query("
     SELECT SUM(amount) FROM Payment_tbl 
     WHERE DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(CURRENT_DATE, '%Y-%m')
@@ -75,7 +77,7 @@ if ($result && $row = $result->fetch_row()) {
     $monthlyIncome = $row[0] ?: 0;
 }
 
-// Fetch Recent 5 Orders for the details section
+// grab the last 5 orders to show in the little table at the bottom
 $recentOrders = [];
 $recentQuery = "SELECT o.orderID, o.date, o.totamt, c.companyname 
                 FROM Order_tbl o 
@@ -89,18 +91,19 @@ if ($recentResult && $recentResult->num_rows > 0) {
 }
 
 // --- START OF DYNAMIC CHART DATA ---
+// getting the revenue numbers for the line chart
 $chartMonths = [];
 $chartSales = [];
 $salesMap = [];
 
-// 1. Generate labels for the last 6 months safely (prevents day-skipping issues on 31st)
+// 1. generate the names of the last 6 months (safely so it doesn't break on the 31st of the month)
 for ($i = 5; $i >= 0; $i--) {
     $monthLabel = date('M', strtotime(date('Y-m-01') . " -$i months"));
     $chartMonths[] = $monthLabel;
-    $salesMap[$monthLabel] = 0; // Default to 0 so months with no sales don't break the chart
+    $salesMap[$monthLabel] = 0; // start at 0 so months with nothing don't crash the chart
 }
 
-// 2. Fetch the real aggregated revenue from the database
+// 2. actually pull the revenue grouped by month from the database
 $trendQuery = "
     SELECT 
         DATE_FORMAT(date, '%b') AS month_label, 
@@ -120,13 +123,13 @@ if ($trendResult && $trendResult->num_rows > 0) {
     }
 }
 
-// 3. Transfer the mapped data to the final array in chronological order
+// 3. put the numbers into the array in the right order for the chart
 foreach ($chartMonths as $month) {
     $chartSales[] = $salesMap[$month];
 }
 // --- END OF DYNAMIC CHART DATA ---
 
-// Close the connection ONLY after all queries are executed
+// we are done with the db for now, close it up
 $conn->close();
 ?>
 

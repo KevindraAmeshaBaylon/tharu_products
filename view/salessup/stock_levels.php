@@ -15,6 +15,7 @@ $conn = getDBConnection();
 // --- VERY BASIC BACKEND LOGIC ---
 
 // 1. Handle "Add New Material" form submission
+// when we fill out the form to add a completely new material to inventory
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_material'])) {
     $name = $conn->real_escape_string($_POST['name']);
     $qty = $conn->real_escape_string($_POST['quantity']);
@@ -22,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_material'])) {
     $supplierID = $conn->real_escape_string($_POST['supplierID']);
 
     // Simple INSERT query
+    // pushing the new material into the database
     $sql = "INSERT INTO Rawmaterial_tbl (name, quantity, unitprice, supplierID) 
             VALUES ('$name', '$qty', '$price', '$supplierID')";
     $conn->query($sql);
@@ -31,12 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_material'])) {
 }
 
 // 2. Handle "Adjust Stock" form submission
+// when we need to update the quantity or price of something we already have
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_material'])) {
     $materialID = $conn->real_escape_string($_POST['materialID']);
     $qty = $conn->real_escape_string($_POST['quantity']);
     $price = $conn->real_escape_string($_POST['unitprice']);
 
     // Simple UPDATE query
+    // saving the new quantity and price
     $sql = "UPDATE Rawmaterial_tbl SET quantity='$qty', unitprice='$price' WHERE materialID='$materialID'";
     $conn->query($sql);
     
@@ -45,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_material'])) {
 }
 
 // 3. Fetch Suppliers for the "Add New" dropdown
+// getting a list of all our suppliers so we can pick one when adding new materials
 $suppliers = [];
 $supSql = "SELECT supplierID, companyname FROM Supplier_tbl";
 $supResult = $conn->query($supSql);
@@ -55,6 +60,7 @@ if ($supResult && $supResult->num_rows > 0) {
 }
 
 // 4. Fetch all stock items to display in the table and chart
+// grab all our raw materials and sort them so the most stocked ones are at the top
 $sql = "SELECT materialID, name, quantity, unitprice FROM Rawmaterial_tbl ORDER BY quantity DESC";
 $result = $conn->query($sql);
 
@@ -201,6 +207,7 @@ $conn->close();
                         if (!empty($tableRows)) {
                             foreach($tableRows as $row) { 
                                 // Basic logic to show a warning if stock is below 1000
+                                // this just makes the badge red if we are running low on something
                                 $statusBadge = ($row['quantity'] < 1000) ? "<span class='badge-low'>Low Stock</span>" : "<span class='badge-good'>Healthy</span>";
                         ?>
                         <tr>
@@ -298,6 +305,7 @@ $conn->close();
 
 <script>
     // Modal Functions for Adding Material
+    // shows the form to add a brand new material
     function openAddModal() {
         document.getElementById('addMaterialModal').style.display = 'flex';
     }
@@ -306,6 +314,7 @@ $conn->close();
     }
 
     // Modal Functions for Adjusting Stock
+    // shows the form to tweak existing stock and fills in the current numbers
     function openAdjustModal(id, name, qty, price) {
         document.getElementById('adj_id').value = id;
         document.getElementById('display_mat_name').innerText = name;
@@ -319,6 +328,7 @@ $conn->close();
     }
 
     // Grab the data from PHP and convert it into Javascript arrays for Chart.js
+    // handing off the chart info from the backend to the frontend script
     const chartLabels = <?php echo json_encode($chartLabels); ?>;
     const chartData = <?php echo json_encode($chartData); ?>;
 

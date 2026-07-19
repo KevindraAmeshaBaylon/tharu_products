@@ -1,10 +1,11 @@
 <?php
 session_start();
 
-// Include database
+// Include database setup
 require_once '../../model/config/database.php';
 
 // STRICT AUTHENTICATION GUARD (Preserved exactly as requested)
+// basically making sure only sales supervisors can get in here
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'salessup') {
     header("Location: ../../auth/login.php");
     exit;
@@ -15,6 +16,7 @@ $conn = getDBConnection();
 // --- VERY BASIC BACKEND LOGIC ---
 
 // 1. Handle Customer Profile Update
+// when someone clicks 'save changes' on a customer profile
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_customer'])) {
     $id = $conn->real_escape_string($_POST['customerID']);
     $nic = $conn->real_escape_string($_POST['customerNIC']);
@@ -29,11 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_customer'])) {
 }
 
 // 2. Handle Inquiry Response
+// when we reply to a customer's message
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['respond_inquiry'])) {
     $inquiryID = $conn->real_escape_string($_POST['inquiryID']);
     $response = $conn->real_escape_string($_POST['response']);
 
     // Update the inquiry with the response and change flags
+    // just updating the inquiry row in the db to show it's answered
     $sql = "UPDATE Inquiry_tbl SET response='$response', pending=0, answered=1 WHERE inquiryID='$inquiryID'";
     $conn->query($sql);
     
@@ -42,10 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['respond_inquiry'])) {
 }
 
 // 3. Fetch Customers
+// getting all the customers from the database so we can list them
 $sql = "SELECT * FROM Customer_tbl";
 $result = $conn->query($sql);
 
 // 4. Fetch Inquiries with Customer Names
+// pulling in the messages and matching them up with the company name
 $inquirySql = "SELECT i.inquiryID, i.message, i.response, i.pending, i.answered, c.companyname 
                FROM Inquiry_tbl i
                JOIN Customer_tbl c ON i.customerID = c.customerID
@@ -301,6 +307,7 @@ $conn->close();
 
 <script>
     // Functions for Customer Edit Modal
+    // this pops up the edit form and fills in the current details
     function openEditForm(id, nic, name, address) {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_nic').value = nic;
@@ -314,6 +321,7 @@ $conn->close();
     }
 
     // Functions for Inquiry Response Modal
+    // this opens up the reply box for a customer message
     function openRespondForm(id, customerName, message, response) {
         document.getElementById('inq_id').value = id;
         document.getElementById('inq_customer_name').innerText = customerName;

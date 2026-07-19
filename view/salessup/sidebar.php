@@ -1,5 +1,6 @@
 <?php
-// Get the current filename so we can highlight the active link
+// Get the current filename so we can highlight the active link in the menu
+// this helps us know which page the user is currently looking at
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <style>
@@ -18,12 +19,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         margin: 0;
     }
 
+    /* basic setup so our page takes up the full screen height */
     .dashboard-wrapper {
         display: flex;
         min-height: 100vh;
     }
 
     /* Sidebar Styling */
+    /* this makes the dark green panel on the left side stay fixed and stretch top to bottom */
     .sidebar-panel {
         width: 260px;
         background-color: var(--sidebar-bg);
@@ -42,6 +45,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         letter-spacing: 1px;
     }
 
+    /* how each individual menu link looks normally */
     .nav-dash-link {
         display: flex;
         align-items: center;
@@ -55,10 +59,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         transition: all 0.2s ease;
         cursor: pointer;
         position: relative;
-        overflow: hidden; /* Contains the slice effect */
+        overflow: hidden; /* keeps the cool hover animations inside the button */
         z-index: 1;
     }
 
+    /* this creates the shiny sword slash effect that waits off-screen */
     .nav-dash-link::after {
         content: '';
         position: absolute;
@@ -67,6 +72,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         width: 25%;
         height: 100%;
         /* Tinted with Zoro's green Haki energy */
+        /* giving it that cool green anime glow */
         background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.3), rgba(255, 255, 255, 0.7), transparent);
         transform: skewX(-25deg);
     }
@@ -80,10 +86,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         100% { left: 150%; }
     }
 
+    /* when you hover over a link or when it's the active page */
     .nav-dash-link:hover, .nav-dash-link.active {
         background-color: var(--sidebar-active);
         color: #ffffff;
         border-left: 4px solid var(--forest-main);
+        /* pulsating aura effect */
         animation: hakiEmission 1.5s infinite alternate ease-in-out;
     }
 
@@ -102,12 +110,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         }
     }
 
+    /* the red warning text for signing out */
     .sign-out-text {
         position: relative;
         z-index: 2;
         transition: color 0.2s;
     }
 
+    /* it gets brighter and scarier when you hover */
     .sign-out-text:hover {
         color: #ff3333 !important;
         text-shadow: 0 0 5px rgba(255, 0, 0, 0.6), 1px 1px 0px #000;
@@ -180,6 +190,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <hr style="border-color: rgba(255,255,255,0.1);">
         
         <div class="nav flex-column">
+            <!-- creating all the navigation links and making them glow if we are on that page -->
             <a href="dashboard.php" class="nav-dash-link <?php echo ($currentPage == 'dashboard.php') ? 'active' : ''; ?>"><i class="bi bi-bar-chart-fill"></i> Dashboard</a>
             <a href="customers.php" class="nav-dash-link <?php echo ($currentPage == 'customers.php') ? 'active' : ''; ?>"><i class="bi bi-people-fill"></i> Customers</a>
             <a href="orders.php" class="nav-dash-link <?php echo ($currentPage == 'orders.php') ? 'active' : ''; ?>"><i class="bi bi-box-seam"></i> Orders</a>
