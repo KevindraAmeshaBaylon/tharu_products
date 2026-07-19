@@ -71,8 +71,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         left: -100%;
         width: 25%;
         height: 100%;
-        /* Tinted with Zoro's green Haki energy */
-        /* giving it that cool green anime glow */
+        /* Creates a subtle glowing gradient effect */
         background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.3), rgba(255, 255, 255, 0.7), transparent);
         transform: skewX(-25deg);
     }
@@ -91,7 +90,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         background-color: var(--sidebar-active);
         color: #ffffff;
         border-left: 4px solid var(--forest-main);
-        /* pulsating aura effect */
+        /* Subtle pulsating animation for active state */
         animation: hakiEmission 1.5s infinite alternate ease-in-out;
     }
 
@@ -101,7 +100,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             box-shadow: -2px 0 5px -2px rgba(46, 125, 50, 0);
         }
         50% {
-            border-left-color: #4ade80; /* Vibrant Haki Green */
+            border-left-color: #4ade80; /* Active highlight color */
             box-shadow: -4px 0 15px -2px rgba(74, 222, 128, 0.4), inset 3px 0 8px -3px rgba(74, 222, 128, 0.2);
         }
         100% {
@@ -117,7 +116,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         transition: color 0.2s;
     }
 
-    /* it gets brighter and scarier when you hover */
+    /* Highlights the sign-out text on hover for emphasis */
     .sign-out-text:hover {
         color: #ff3333 !important;
         text-shadow: 0 0 5px rgba(255, 0, 0, 0.6), 1px 1px 0px #000;
@@ -143,7 +142,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
     .sign-out-text:hover::after {
         background: linear-gradient(90deg, transparent, #ff0000, #1a0000, #ff0000, transparent);
-        animation: supremeKingLightning2 0.3s infinite reverse;
+        animation: supremeKingLightning2 0.3s infinite reverse; /* Adds a dynamic visual effect */
     }
 
     @keyframes supremeKingLightning1 {
