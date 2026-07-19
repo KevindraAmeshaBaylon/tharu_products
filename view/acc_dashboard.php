@@ -1223,7 +1223,6 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                             <td><?= htmlspecialchars($att['date']) ?></td>
                                             <td><?= htmlspecialchars($att['emp_name']) ?></td>
                                             <td><span class="badge border border-dark text-dark rounded-pill"><?= htmlspecialchars($att['emp_role']) ?></span></td>                                            <td><?= htmlspecialchars($att['login']) ?></td>
-                                            <td><?= htmlspecialchars($att['login']) ?></td>
                                             <td><?= htmlspecialchars($att['logout']) ?></td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-outline-primary btn-sm me-1" onclick='openAttendanceEditModal(<?= $att['attendanceID'] ?>, <?= json_encode($att['date']) ?>, <?= json_encode($att['login']) ?>, <?= json_encode($att['logout']) ?>, <?= $att['userID'] ?? 'null' ?>)'>Edit</button>
