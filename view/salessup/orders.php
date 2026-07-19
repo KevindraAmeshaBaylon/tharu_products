@@ -17,22 +17,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     
     // 1. Get safe data
     $orderID = $conn->real_escape_string($_POST['orderID']);
-    $batchID = $conn->real_escape_string($_POST['batchID']);
     $newStatus = $_POST['new_status'];
 
-    // 2. Update logic based on the requested status
-    if ($newStatus == 'Accepted') {
-        if ($batchID) {
-            $conn->query("UPDATE ProductionBatch_tbl SET inproduction=0, dispatched=0 WHERE batchID='$batchID'");
-        }
-    } elseif ($newStatus == 'Processing') {
-        if ($batchID) {
-            $conn->query("UPDATE ProductionBatch_tbl SET inproduction=1, dispatched=0 WHERE batchID='$batchID'");
-        }
-    } elseif ($newStatus == 'Dispatched') {
-        if ($batchID) {
-            $conn->query("UPDATE ProductionBatch_tbl SET inproduction=0, dispatched=1 WHERE batchID='$batchID'");
-        }
+    // 2. Update logic based ONLY on Delivered or Cancelled
+    if ($newStatus == 'Delivered') {
+        $conn->query("UPDATE Order_tbl SET delivered=1, cancelled=0 WHERE orderID='$orderID'");
+    } elseif ($newStatus == 'Cancelled') {
+        $conn->query("UPDATE Order_tbl SET cancelled=1, delivered=0 WHERE orderID='$orderID'");
     }
     
     // Refresh the page
@@ -212,7 +203,6 @@ $conn->close();
                                 <?php if($currentStatus != "Delivered" && $currentStatus != "Cancelled"): ?>
                                     <button class="btn btn-sm btn-forest px-3" onclick="openStatusForm(
                                         '<?php echo $row['orderID']; ?>', 
-                                        '<?php echo $row['batchID']; ?>',
                                         '<?php echo $currentStatus; ?>'
                                     )"><i class="bi bi-arrow-repeat"></i> Update Status</button>
                                 <?php else: ?>
@@ -241,14 +231,13 @@ $conn->close();
         <!-- Basic HTML Form -->
         <form method="POST" action="orders.php">
             <input type="hidden" id="form_orderID" name="orderID">
-            <input type="hidden" id="form_batchID" name="batchID">
             
             <div class="mb-4">
                 <label class="form-label text-muted small fw-bold">Select New Status</label>
                 <select class="form-select bg-light" id="form_status" name="new_status" required>
-                    <option value="Accepted">Accepted</option>
-                    <option value="Processing">Processing</option>
-                    <option value="Dispatched">Dispatched</option>
+                    <!-- Only Delivered and Cancelled remain -->
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
                 </select>
             </div>
             
@@ -262,10 +251,12 @@ $conn->close();
 
 <!-- Very Simple Javascript to handle the form popup -->
 <script>
-    function openStatusForm(orderID, batchID, currentStatus) {
+    function openStatusForm(orderID, currentStatus) {
         document.getElementById('form_orderID').value = orderID;
-        document.getElementById('form_batchID').value = batchID;
-        document.getElementById('form_status').value = currentStatus;
+        
+        // If the current status isn't Delivered or Cancelled, it defaults to the first option, 
+        // but you could add logic here if you want it to pre-select based on something else.
+        // For now, it will just default to "Delivered".
         
         document.getElementById('updateStatusModal').style.display = 'flex';
     }
