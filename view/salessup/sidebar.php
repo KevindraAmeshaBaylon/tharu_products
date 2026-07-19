@@ -63,7 +63,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         z-index: 1;
     }
 
-    /* this creates the shiny sword slash effect that waits off-screen */
+    /* this creates a dynamic visual sweep transition that waits off-screen */
     .nav-dash-link::after {
         content: '';
         position: absolute;
@@ -77,10 +77,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     }
     
     .nav-dash-link:hover::after {
-        animation: katanaGlint 0.4s ease-out forwards;
+        animation: slashGlint 0.4s ease-out forwards;
     }
 
-    @keyframes katanaGlint {
+    @keyframes slashGlint {
         0% { left: -50%; }
         100% { left: 150%; }
     }
@@ -91,10 +91,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         color: #ffffff;
         border-left: 4px solid var(--forest-main);
         /* Subtle pulsating animation for active state */
-        animation: hakiEmission 1.5s infinite alternate ease-in-out;
+        animation: focusEmission 1.5s infinite alternate ease-in-out;
     }
 
-    @keyframes hakiEmission {
+    @keyframes focusEmission {
         0% {
             border-left-color: #2e7d32;
             box-shadow: -2px 0 5px -2px rgba(46, 125, 50, 0);
@@ -137,15 +137,15 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     }
 
     .sign-out-text:hover::before {
-        animation: supremeKingLightning1 0.4s infinite;
+        animation: conquerorPulse1 0.4s infinite;
     }
 
     .sign-out-text:hover::after {
         background: linear-gradient(90deg, transparent, #ff0000, #1a0000, #ff0000, transparent);
-        animation: supremeKingLightning2 0.3s infinite reverse; /* Adds a dynamic visual effect */
+        animation: conquerorPulse2 0.3s infinite reverse; /* Adds a dynamic visual effect */
     }
 
-    @keyframes supremeKingLightning1 {
+    @keyframes conquerorPulse1 {
         0%, 100% { opacity: 0; transform: scaleX(0.8) rotate(0deg) translateY(0); }
         20% { opacity: 1; transform: scaleX(1.2) rotate(-4deg) translateY(-8px); }
         40% { opacity: 0; transform: scaleX(0.9) rotate(2deg) translateY(4px); }
@@ -153,7 +153,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         80% { opacity: 0; transform: scaleX(1) rotate(0deg) translateY(0); }
     }
 
-    @keyframes supremeKingLightning2 {
+    @keyframes conquerorPulse2 {
         0%, 100% { opacity: 0; transform: scaleX(0.7) rotate(0deg) translateY(0); }
         15% { opacity: 1; transform: scaleX(1.3) rotate(5deg) translateY(10px); }
         35% { opacity: 0; transform: scaleX(0.8) rotate(-3deg) translateY(-6px); }
