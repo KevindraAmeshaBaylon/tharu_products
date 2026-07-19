@@ -15,12 +15,14 @@ $conn = getDBConnection();
 // --- VERY BASIC BACKEND LOGIC FOR CRUD OPERATIONS ---
 
 // 1. CREATE: Hire a new driver
+// when we add a new driver from the modal
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_driver'])) {
     $name = $conn->real_escape_string($_POST['drivername']);
     $dob = $conn->real_escape_string($_POST['driverDOB']);
     $salary = $conn->real_escape_string($_POST['fixed_salary']);
     
     // Step A: Create a basic user record first (Required by your database design)
+    // we need to make them a standard user account before we can make them a driver
     $tempUsername = "driver_" . time(); // Generate a simple unique username
     $tempEmail = $tempUsername . "@tharu.lk";
     $tempPassword = password_hash("123456", PASSWORD_DEFAULT); // Default password
@@ -29,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_driver'])) {
     
     if ($conn->query($userSql)) {
         // Step B: Get the new userID and insert into Driver_tbl
+        // now link their new user id to their driver profile
         $userID = $conn->insert_id;
         $driverSql = "INSERT INTO Driver_tbl (userID, driverDOB, drivername, fixed_salary) 
                       VALUES ('$userID', '$dob', '$name', '$salary')";
@@ -41,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_driver'])) {
 }
 
 // 2. UPDATE: Edit existing driver details
+// when we update a driver's details
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_driver'])) {
     $driverID = $conn->real_escape_string($_POST['driverID']);
     $name = $conn->real_escape_string($_POST['drivername']);
@@ -56,10 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_driver'])) {
 }
 
 // 3. DELETE: Remove a driver
+// when we fire or remove a driver
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_driver'])) {
     $userID = $conn->real_escape_string($_POST['userID']); // We delete by userID to trigger CASCADE
     
     // Deleting the user automatically deletes the driver profile due to ON DELETE CASCADE
+    // the db handles deleting the driver part automatically if we delete the user
     $sql = "DELETE FROM User_tbl WHERE userID='$userID'";
     $conn->query($sql);
     
@@ -69,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_driver'])) {
 }
 
 // 4. READ: Fetch all drivers to display in the table
+// grab all the drivers so we can show them on the page
 $sql = "SELECT driverID, userID, drivername, driverDOB, fixed_salary FROM Driver_tbl ORDER BY driverID DESC";
 $result = $conn->query($sql);
 
@@ -295,6 +302,7 @@ $conn->close();
 <!-- Very Simple Javascript to handle the form popups -->
 <script>
     // Functions for Add Modal
+    // pops open the add driver form
     function openAddModal() {
         document.getElementById('addDriverModal').style.display = 'flex';
     }
@@ -303,6 +311,7 @@ $conn->close();
     }
 
     // Functions for Edit Modal
+    // pops open the edit form and fills in the current info
     function openEditModal(id, name, dob, salary) {
         document.getElementById('edit_id').value = id;
         document.getElementById('edit_name').value = name;

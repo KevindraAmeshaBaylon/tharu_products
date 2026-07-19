@@ -15,13 +15,14 @@ $conn = getDBConnection();
 // --- VERY BASIC BACKEND LOGIC ---
 
 // 1. Handle the Assignment Form Submission
+// when we pick a driver and hit submit, this runs
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver'])) {
     $orderID = $conn->real_escape_string($_POST['orderID']);
     $driverID = $conn->real_escape_string($_POST['driverID']);
 
     // Basic security check: Make sure a driver was actually selected
     if (!empty($driverID)) {
-        // Update the order with the selected driver
+        // Update the order with the selected driver in the database
         $sql = "UPDATE Order_tbl SET driverID='$driverID' WHERE orderID='$orderID'";
         $conn->query($sql);
         
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver'])) {
 }
 
 // 2. Fetch Available Drivers
-// A driver is available if they DO NOT have any active (undelivered & uncancelled) orders assigned to them.
+// A driver is available if they DO NOT have any active (undelivered & uncancelled) orders assigned to them right now.
 $availableDrivers = [];
 $driverSql = "SELECT driverID, drivername FROM Driver_tbl 
               WHERE driverID NOT IN (
@@ -47,7 +48,7 @@ if ($driverResult && $driverResult->num_rows > 0) {
 }
 
 // 3. Fetch Dispatched Orders Needing a Driver
-// Orders where batch is dispatched, but no driver is assigned yet
+// These are orders where the batch is done and dispatched, but we haven't given it to a driver yet.
 $unassignedOrders = [];
 $unassignedSql = "SELECT DISTINCT o.orderID, o.date, c.companyname, c.address 
                   FROM Order_tbl o
@@ -64,6 +65,7 @@ if ($unassignedResult && $unassignedResult->num_rows > 0) {
 }
 
 // 4. Fetch Orders Currently In Transit (Already assigned to a driver)
+// getting the list of deliveries that are on the road right now
 $inTransitOrders = [];
 $transitSql = "SELECT o.orderID, c.companyname, c.address, d.drivername 
                FROM Order_tbl o
@@ -307,6 +309,7 @@ $conn->close();
 
 <!-- Very Simple Javascript to handle the form popup -->
 <script>
+    // pops up the assign driver modal and sets the order ID
     function openAssignForm(orderID, customerName) {
         document.getElementById('modal_orderID').value = orderID;
         document.getElementById('display_customer_name').innerText = customerName;

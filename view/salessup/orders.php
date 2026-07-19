@@ -13,6 +13,7 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SE
 $conn = getDBConnection();
 
 // --- VERY BASIC BACKEND LOGIC ---
+// when someone clicks to update the status of an order
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     
     // 1. Get safe data
@@ -20,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $newStatus = $_POST['new_status'];
 
     // 2. Update logic based ONLY on Delivered or Cancelled
+    // updating the db depending on what status they picked
     if ($newStatus == 'Delivered') {
         $conn->query("UPDATE Order_tbl SET delivered=1, cancelled=0 WHERE orderID='$orderID'");
     } elseif ($newStatus == 'Cancelled') {
@@ -32,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 }
 
 // 3. Simple SELECT query with JOINs to get Product, Quantity, and Bill Amount
+// grabbing all the orders and tying them to their products and batches
 $sql = "SELECT 
             o.orderID, 
             o.date, 
@@ -171,6 +174,7 @@ $conn->close();
                             while($row = $result->fetch_assoc()) { 
                                 
                                 // Determine Status for UI
+                                // figure out what status label to show based on the flags in the db
                                 $currentStatus = "Accepted"; // Default
                                 $badgeClass = "badge-accepted";
 
@@ -251,6 +255,7 @@ $conn->close();
 
 <!-- Very Simple Javascript to handle the form popup -->
 <script>
+    // opens the status update modal
     function openStatusForm(orderID, currentStatus) {
         document.getElementById('form_orderID').value = orderID;
         

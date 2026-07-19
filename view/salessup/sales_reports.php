@@ -15,6 +15,7 @@ $conn = getDBConnection();
 // --- VERY BASIC BACKEND LOGIC ---
 
 // 1. Get the selected month from the URL, or default to the current month
+// check if they picked a month, otherwise just use this month
 $selectedMonth = isset($_GET['report_month']) ? $_GET['report_month'] : date('Y-m');
 
 // Make it safe
@@ -30,6 +31,7 @@ $totalIncome = 0;
 $soldUnits = 0;
 
 // 2. Fetch Number of Orders and Total Sales Amount (Invoiced) for the month
+// get the count and sum of all orders for the month we are looking at
 $orderSql = "SELECT COUNT(orderID) AS order_count, SUM(totamt) AS total_sales 
              FROM Order_tbl 
              WHERE DATE_FORMAT(date, '%Y-%m') = '$safeMonth' AND cancelled = 0";
@@ -40,6 +42,7 @@ if ($orderResult && $row = $orderResult->fetch_assoc()) {
 }
 
 // 3. Fetch Total Income (Actual payments received) for the month
+// get the actual cash that came in this month
 $incomeSql = "SELECT SUM(amount) AS total_income 
               FROM Payment_tbl 
               WHERE DATE_FORMAT(date, '%Y-%m') = '$safeMonth'";
@@ -49,6 +52,7 @@ if ($incomeResult && $row = $incomeResult->fetch_assoc()) {
 }
 
 // 4. Fetch Sold Units (Dispatched) for the month
+// count how many actual units went out the door
 $unitsSql = "SELECT SUM(pb.outputqty) AS sold_units 
              FROM ProductionBatch_tbl pb
              JOIN Order_Batch_tbl ob ON pb.batchID = ob.batchID
@@ -60,6 +64,7 @@ if ($unitsResult && $row = $unitsResult->fetch_assoc()) {
 }
 
 // 5. Fetch the detailed list of orders for the table
+// get the list of orders to put in the big table at the bottom
 $tableRows = [];
 $detailSql = "SELECT o.orderID, o.date, o.totamt, c.companyname 
               FROM Order_tbl o
