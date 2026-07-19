@@ -1,8 +1,18 @@
 <?php
+/* Workflow: 
+1. start the session
+2. verify the accountant is authenticated
+3. process any POST 
+4. actions for payroll, attendance, expenses, or reports
+5. load the data needed for each dashboard tab
+6. and then render the tabbed accountant interface with supporting JavaScript. 
+*/
 session_start();
 require_once __DIR__ . '/../model/config/database.php';
 
-// Access Control Validation Strategy
+/* Block non-accountant users from entering this dashboard 
+and send them back to the login page.
+*/
 if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'accountant' || !isset($_SESSION['accountant_id'])) {
     header("Location: ../auth/login.php");
     exit;
@@ -11,7 +21,10 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'accountant' 
 $conn = getDBConnection();
 $accountantID = $_SESSION['accountant_id'];
 
-// Canonical tab configuration and helpers
+/* Define the allowed dashboard tabs, 
+the alias map for older tab names, 
+and the action-to-tab routing used after form submissions. 
+*/
 $dashboardTabs = ['attendanceTab', 'payroll', 'expenses', 'salaryLedger', 'expenseLedger', 'reports'];
 $dashboardTabAliases = [
     'attendance' => 'attendanceTab',
@@ -60,6 +73,7 @@ function dashboardSetFlash($type, $message, $tabId = null) {
     ];
 }
 
+// Read and clear the flash message so it only appears once after the redirect.
 function dashboardConsumeFlash() {
     if (!isset($_SESSION['dashboard_flash']) || !is_array($_SESSION['dashboard_flash'])) {
         return null;
@@ -70,12 +84,14 @@ function dashboardConsumeFlash() {
     return $flash;
 }
 
+// Redirect back to the dashboard while preserving the tab and a success or error message.
 function dashboardRedirectWithFlash($type, $message, $tabId) {
     dashboardSetFlash($type, $message, $tabId);
     header('Location: acc_dashboard.php?tab_id=' . urlencode($tabId));
     exit;
 }
 
+// Resolve the active tab from the request, action mapping, and any flash message returned from a previous redirect.
 $error_message = '';
 $success_message = '';
 $action = $_POST['action'] ?? '';
@@ -103,15 +119,15 @@ if (is_array($flash) && !empty($flash['message'])) {
 $report_generated = false;
 $current_report_data = null;
 
-// Check if a report is already in session
+//Restore the most recently generated expense report from the session so it can be displayed or exported.
 if (isset($_SESSION['report_data'])) {
     $report_generated = true;
     $current_report_data = $_SESSION['report_data'];
 }
 
-// ========================================================
-// REPORT GENERATION HANDLER
-// ========================================================
+/*REPORT GENERATION HANDLER - 
+Handle monthly expense report generation by using salary and operational expenses for the selected month.
+======================================================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generate_report') {
     $report_year = intval($_POST['report_year'] ?? 0);
     $report_month = intval($_POST['report_month'] ?? 0);
@@ -142,56 +158,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 ]
             ];
             
-            // Query 1: Sales Supervisor Total Salary
+            // Sum of sales supervisor salary payments for the selected month.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(s.totamtpaid), 0) as total FROM salary_tbl s INNER JOIN attendance_tbl a ON s.attendanceID = a.attendanceID INNER JOIN SalesSuperviser_tbl ss ON a.salessupID = ss.salessupID WHERE s.accountantID = ? AND YEAR(s.paydate) = ? AND MONTH(s.paydate) = ?");
             $stmt->bind_param('iii', $accountantID, $report_year, $report_month);
             $stmt->execute();
             $reportData['expenses']['sales_supervisor_salary'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Query 2: Stock Supervisor Total Salary
+            // Sum stock supervisor salary payments for the selected month.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(s.totamtpaid), 0) as total FROM salary_tbl s INNER JOIN attendance_tbl a ON s.attendanceID = a.attendanceID INNER JOIN StockSuperviser_tbl st ON a.stocksupID = st.stocksupID WHERE s.accountantID = ? AND YEAR(s.paydate) = ? AND MONTH(s.paydate) = ?");
             $stmt->bind_param('iii', $accountantID, $report_year, $report_month);
             $stmt->execute();
             $reportData['expenses']['stock_supervisor_salary'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Query 3: Worker Total Wages
+            // Sum of worker wage payments for the selected month.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(s.totamtpaid), 0) as total FROM salary_tbl s INNER JOIN attendance_tbl a ON s.attendanceID = a.attendanceID INNER JOIN Worker_tbl w ON a.workerID = w.workerID WHERE s.accountantID = ? AND YEAR(s.paydate) = ? AND MONTH(s.paydate) = ?");
             $stmt->bind_param('iii', $accountantID, $report_year, $report_month);
             $stmt->execute();
             $reportData['expenses']['worker_wages'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Query 4: Driver Total Wages
+            // Sum of driver wage payments for the selected month.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(s.totamtpaid), 0) as total FROM salary_tbl s INNER JOIN attendance_tbl a ON s.attendanceID = a.attendanceID INNER JOIN Driver_tbl d ON a.driverID = d.driverID WHERE s.accountantID = ? AND YEAR(s.paydate) = ? AND MONTH(s.paydate) = ?");
             $stmt->bind_param('iii', $accountantID, $report_year, $report_month);
             $stmt->execute();
             $reportData['expenses']['driver_wages'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Query 5: Raw Materials
+            // Sum of expenses that look like raw materials, purchases, or similar stock inputs.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM expense_tbl WHERE accountantID = ? AND (type LIKE '%material%' OR type LIKE '%purchase%' OR type LIKE '%raw%')");
             $stmt->bind_param('i', $accountantID);
             $stmt->execute();
             $reportData['expenses']['raw_materials'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Query 6: Machine Maintenance
+            // Sum of expenses related to machine maintenance and repairs.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM expense_tbl WHERE accountantID = ? AND (type LIKE '%maintenance%' OR type LIKE '%repair%' OR type LIKE '%machine%')");
             $stmt->bind_param('i', $accountantID);
             $stmt->execute();
             $reportData['expenses']['machine_maintenance'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Query 7: Utility Bills
+            // Sum of utilities such as electricity, water, and other bill-like charges.
             $stmt = $conn->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM expense_tbl WHERE accountantID = ? AND (type LIKE '%utility%' OR type LIKE '%electricity%' OR type LIKE '%water%' OR type LIKE '%bill%')");
             $stmt->bind_param('i', $accountantID);
             $stmt->execute();
             $reportData['expenses']['utility_bills'] = (float)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
             $stmt->close();
             
-            // Insert report record
+            // Record the report generation event in the report table.
             $stmt = $conn->prepare("INSERT INTO ExpenseReport_tbl (month, genaratedAt) VALUES (?, NOW())");
             $stmt->bind_param('s', $month_string);
             $stmt->execute();
@@ -209,9 +225,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// ========================================================
-// EXPORT HANDLER
-// ========================================================
+/* EXPORT HANDLER - Handle export requests by producing either a downloadable 
+XLSX file or an HTML page that can be converted to PDF or JPEG.
+======================================================== */
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'export_report') {
     if (!isset($_SESSION['report_data']) || !isset($_POST['export_format'])) {
         header('HTTP/1.1 400 Bad Request');
@@ -281,7 +298,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         exit;
     } else {
-        // PDF and JPEG export - return HTML page with export buttons
+        // Build a printable HTML report view that the browser-side tools can convert into PDF or JPEG.
         $tableRows = '';
         foreach ($categories as $key => $label) {
             $amount = $reportData['expenses'][$key];
@@ -312,7 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Attendance Helper: resolve role-specific foreign keys from a selected user
+// Attendance Helper - Resolve the correct employee foreign key for attendance based on the selected user and role.
 function resolveAttendanceEmployeeReference($conn, $userID) {
     $stmt = $conn->prepare(
         "SELECT u.userID, u.role,
@@ -334,7 +351,11 @@ function resolveAttendanceEmployeeReference($conn, $userID) {
     return $employee;
 }
 
-//SALARY RUN CALCULATION 
+/* SALARY CALCULATIONS -
+Process payroll calculations, 
+ensuring attendance ownership is valid and 
+preventing duplicate full salary payments for 
+supervisors in the same month.*/
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'calculate_salary') {
     $attendanceID = intval($_POST['attendance_id'] ?? 0);
@@ -345,10 +366,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $bonus_pay = floatval($_POST['bonus_pay'] ?? 0);
     $total_amount_paid = $base_pay + $ot_pay + $bonus_pay;
 
-    if ($attendanceID <= 0 || $employeeID <= 0 || empty($paydate)) {
+    if ($attendanceID <= 0 || $employeeID <= 0 || empty($paydate)) { //Input fields cannot be empty 
         $error_message = "Please select a supervisor, attendance record, and payment date.";
     } elseif ($base_pay < 0 || $ot_pay < 0 || $bonus_pay < 0) {
-        $error_message = "Salary values must be valid non-negative numbers.";
+        $error_message = "Salary values must be valid non-negative numbers."; // Validate that salary values are non-negative
     } else {
         $query = "
             SELECT a.attendanceID,
@@ -469,18 +490,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (!empty($final_type) && $amount > 0) {
         $stmt = $conn->prepare("INSERT INTO expense_tbl (type, amount, accountantID, materialID) VALUES (?, ?, ?, NULL)");
         $stmt->bind_param("sdi", $final_type, $amount, $accountantID);
-        if ($stmt->execute()) {
+        if ($stmt->execute()) { //message to show expense was added.
             dashboardRedirectWithFlash('success', 'Manual business expense added correctly.', 'expenses');
-        } else {
-            dashboardRedirectWithFlash('error', 'Fault in manual ledger population sequence execution.', 'expenses');
+        } else { //message to show expense was not added.
+            dashboardRedirectWithFlash('error', 'Business expense could not be added.', 'expenses');
+            //msg to show error in adding expense
         }
         $stmt->close();
-    } else {
-        dashboardRedirectWithFlash('error', 'Please complete all core description metrics correctly.', 'expenses');
+    } else { //msg to show that expense fields were invalid.
+        dashboardRedirectWithFlash('error', 'Please complete all fields correctly.', 'expenses');
     }
 }
 
-//ATTENDANCE CRUD OPERATIONS
+//ATTENDANCE CREATE HANDLER
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_attendance') {
     $attDate = trim($_POST['attendance_date'] ?? '');
     $loginTime = trim($_POST['login_time'] ?? '');
@@ -488,11 +510,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $selectedUserID = intval($_POST['attendance_user_id'] ?? 0);
 
     if (empty($attDate) || empty($loginTime) || empty($logoutTime) || $selectedUserID <= 0) {
-        $error_message = "Please fill in date, login, logout and select an employee.";
+        $error_message = "Please fill in date, login, logout and select an employee."; //input fields cannot be empty
     } else {
         $employeeRef = resolveAttendanceEmployeeReference($conn, $selectedUserID);
         if (!$employeeRef) {
-            $error_message = "Selected employee is not valid for attendance tracking.";
+            $error_message = "Selected employee is not valid for attendance tracking."; //employee reference is invalid
         } else {
             $stocksupID = null;
             $salessupID = null;
@@ -539,7 +561,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         dashboardRedirectWithFlash('error', $error_message, 'attendanceTab');
     }
 }
-
+//ATTENDANCE UPDATE HANDLER
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_attendance') {
     $attendanceID = intval($_POST['attendance_id'] ?? 0);
     $attDate = trim($_POST['attendance_date'] ?? '');
@@ -599,7 +621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         dashboardRedirectWithFlash('error', $error_message, 'attendanceTab');
     }
 }
-
+//ATTENDANCE DELETE HANDLER
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_attendance') {
     $attendanceID = intval($_POST['attendance_id'] ?? 0);
     if ($attendanceID <= 0) {
@@ -627,7 +649,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-//SALARY RECORD EDIT / DELETE
+//SALARY RECORD EDIT 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_salary') {
     $salaryID = intval($_POST['salary_id'] ?? 0);
     $paydate = trim($_POST['paydate'] ?? '');
@@ -646,7 +668,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         dashboardRedirectWithFlash('error', 'Please provide a valid date and amount for salary update.', 'salaryLedger');
     }
 }
-
+//SALARY RECORD DELETE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_salary') {
     $salaryID = intval($_POST['salary_id'] ?? 0);
     if ($salaryID <= 0) {
@@ -661,7 +683,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
     $stmt->close();
 }
-
+//SALARY EXPENSE RECORD DELETE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_expense') {
     $expenseID = intval($_POST['expense_id'] ?? 0);
     if ($expenseID <= 0) {
@@ -677,7 +699,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $stmt->close();
 }
 
-// Fetch active payroll items awaiting processing
+/*LOAD ATTENDANCE WITH PENDING SALARIES - 
+This query fetches attendance records that have not yet been processed 
+for salary, ensuring that only valid employee roles are included.*/
 $attendanceList = $conn->query("
     SELECT a.attendanceID, a.date, a.login, a.logout,
            COALESCE(wu.username, su.username, ssu.username, du.username) as emp_name,
@@ -698,11 +722,11 @@ $attendanceList = $conn->query("
     ORDER BY a.date DESC
 ");
 
-// Fetch processed Salary ledger grouped by role for current month
+//PREPARE SALARY LEDGER DATA FOR CURRENT MONTH
 $currentMonthStart = date('Y-m-01');
 $currentMonthEnd = date('Y-m-t');
 
-// Stock Supervisors - monthly salary with OT breakdown and bonus check
+// Aggregate stock supervisor salary activity for the current month.
 $stockSupLedger = $conn->query("
     SELECT 
         st.stocksupID as emp_id, 
@@ -731,7 +755,7 @@ $stockSupLedger = $conn->query("
     ORDER BY su.username
 ");
 
-// Sales Supervisors - monthly salary with OT breakdown and bonus check
+// Aggregate sales supervisor salary activity for the current month.
 $salesSupLedger = $conn->query("
     SELECT 
         ss.salessupID as emp_id, 
@@ -760,7 +784,7 @@ $salesSupLedger = $conn->query("
     ORDER BY ssu.username
 ");
 
-// Workers - daily salary with days worked and bonus check
+// Aggregate worker salary activity for the current month.
 $workerLedger = $conn->query("
     SELECT 
         w.workerID as emp_id, 
@@ -781,7 +805,7 @@ $workerLedger = $conn->query("
     ORDER BY wu.username
 ");
 
-// Drivers - daily salary with days worked and bonus check
+// Aggregate driver salary activity for the current month.
 $driverLedger = $conn->query("
     SELECT 
         d.driverID as emp_id, 
@@ -802,10 +826,10 @@ $driverLedger = $conn->query("
     ORDER BY du.username
 ");
 
-//Fetch combined organizational layout expense structures
+// Load the accountant's expense ledger so it can be shown in the expense table and used by the report logic.
 $expenseLedger = $conn->query("SELECT * FROM expense_tbl WHERE accountantID = $accountantID ORDER BY expenseID DESC");
 
-//Fetch employee roster for attendance CRUD (exclude customer accounts)
+// Load the employee roster used by the attendance forms, excluding customer accounts.
 $attendanceEmployees = $conn->query("SELECT u.userID, u.username,
        CASE
          WHEN LOWER(u.role) = 'stocksup' THEN 'Stock Supervisor'
@@ -832,7 +856,7 @@ if ($attendanceEmployees && $attendanceEmployees->num_rows > 0) {
     }
 }
 
-//Fetch attendance records for the attendance CRUD tab
+// Load all attendance records for the CRUD table shown in the attendance tab.
 $attendanceCRUD = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logout,
     COALESCE(s.userID, ss.userID, w.userID, d.userID, ac.accountantID) AS userID,
     COALESCE(u_stock.username, u_sales.username, u_worker.username, u_driver.username, u_accountant.username) AS emp_name,
@@ -857,7 +881,7 @@ $attendanceCRUD = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logout
     LEFT JOIN user_tbl u_accountant ON ac.userID = u_accountant.userID
     ORDER BY a.date DESC");
 
-// Salary portal data for stock supervisors, sales supervisors, drivers, and workers
+// Load salary-related employee and attendance data used by the payroll calculator.
 $salaryEmployees = $conn->query("SELECT u.userID, u.username, 'Stock Supervisor' AS role, s.base_salary, s.OT_rate, NULL AS hour_rate, NULL AS fixed_salary FROM StockSuperviser_tbl s JOIN user_tbl u ON s.userID = u.userID UNION SELECT u.userID, u.username, 'Sales Supervisor' AS role, ss.base_salary, ss.OT_rate, NULL AS hour_rate, NULL AS fixed_salary FROM SalesSuperviser_tbl ss JOIN user_tbl u ON ss.userID = u.userID UNION SELECT u.userID, u.username, 'Worker' AS role, NULL AS base_salary, NULL AS OT_rate, w.hour_rate, NULL AS fixed_salary FROM Worker_tbl w JOIN user_tbl u ON w.userID = u.userID UNION SELECT u.userID, u.username, 'Driver' AS role, NULL AS base_salary, NULL AS OT_rate, NULL AS hour_rate, d.fixed_salary FROM Driver_tbl d JOIN user_tbl u ON d.userID = u.userID");
 $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logout, COALESCE(s.userID, ss.userID, w.userID, d.userID) AS userID, COALESCE(su.username, ssu.username, wu.username, du.username) AS username, COALESCE(s.base_salary, ss.base_salary, 0) AS base_salary, COALESCE(s.OT_rate, ss.OT_rate, 0) AS ot_rate, w.hour_rate AS hour_rate, d.fixed_salary AS fixed_salary, CASE WHEN s.stocksupID IS NOT NULL THEN 'Stock Supervisor' WHEN ss.salessupID IS NOT NULL THEN 'Sales Supervisor' WHEN w.workerID IS NOT NULL THEN 'Worker' WHEN d.driverID IS NOT NULL THEN 'Driver' END AS role FROM attendance_tbl a LEFT JOIN StockSuperviser_tbl s ON a.stocksupID = s.stocksupID LEFT JOIN user_tbl su ON s.userID = su.userID LEFT JOIN SalesSuperviser_tbl ss ON a.salessupID = ss.salessupID LEFT JOIN user_tbl ssu ON ss.userID = ssu.userID LEFT JOIN Worker_tbl w ON a.workerID = w.workerID LEFT JOIN user_tbl wu ON w.userID = wu.userID LEFT JOIN Driver_tbl d ON a.driverID = d.driverID LEFT JOIN user_tbl du ON d.userID = du.userID LEFT JOIN salary_tbl sal ON a.attendanceID = sal.attendanceID WHERE sal.salaryID IS NULL AND (s.stocksupID IS NOT NULL OR ss.salessupID IS NOT NULL OR w.workerID IS NOT NULL OR d.driverID IS NOT NULL) ORDER BY a.date DESC");
 ?>
@@ -895,7 +919,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             min-height: 100vh;
         }
 
-        .dashboard-sidebar {
+        .dashboard-sidebar { /*side bar styling*/
             width: 300px;
             background: var(--sidebar-bg);
             color: white;
@@ -910,7 +934,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             flex-direction: column;
         }
 
-        .sidebar-header {
+        .sidebar-header { /*header styling*/
             flex: 0 0 auto;
             display: flex;
             align-items: center;
@@ -918,14 +942,14 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             margin-bottom: 2rem;
         }
 
-        .dashboard-sidebar img {
+        .dashboard-sidebar img { /*logo styling*/
             height: 44px;
             width: auto;
             display: block;
             flex-shrink: 0;
         }
 
-        .sidebar-title {
+        .sidebar-title { /*title (tharu accountant) styling*/
             font-size: 1.25rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -936,14 +960,14 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             font-weight: bold;
         }
 
-        .sidebar-nav {
+        .sidebar-nav { /*navigation buttons styling*/
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
             flex: 1;
         }
 
-        .sidebar-nav button {
+        .sidebar-nav button { /*navigation buttons styling*/
             border: none;
             width: 100%;
             text-align: left;
@@ -955,12 +979,12 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         }
 
         .sidebar-nav button.active,
-        .sidebar-nav button:hover {
+        .sidebar-nav button:hover { /*active and hover state styling for navigation buttons*/
             background: var(--sidebar-active);
             color: white;
         }
 
-        .dashboard-main {
+        .dashboard-main { /*main content styling*/
             margin-left: 300px;
             width: calc(100% - 300px);
             padding: 2rem 2.5rem;
@@ -979,7 +1003,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             color: #64748b;
         }
 
-        .card {
+        .card { /*card styling*/
             border-radius: 22px;
             border: 1px solid var(--panel-border);
             background: var(--panel-bg);
@@ -997,19 +1021,19 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             font-weight: 600;
         }
 
-        .btn-success:hover {
+        .btn-success:hover { /*hover state for success button*/
             background-color: #15803d;
         }
 
-        .form-check-input {
+        .form-check-input { /*checkbox styling*/
             cursor: pointer;
         }
 
-        .content-section {
+        .content-section { /*content section styling*/
             margin-bottom: 1.75rem;
         }
 
-        @media (max-width: 1199px) {
+        @media (max-width: 1199px) { /*responsive adjustments for smaller screens*/
             .dashboard-sidebar {
                 position: relative;
                 width: 100%;
@@ -1024,7 +1048,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             }
         }
     </style>
-    <!-- Chart.js Library for Advanced Charts -->
+    <!-- Chart.js is loaded so the monthly expense distribution can be rendered as a bar chart. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
@@ -1050,6 +1074,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     </aside>
 
     <main class="dashboard-main">
+        <!-- Show the latest backend validation or success result above the active dashboard section. -->
         <?php if(!empty($error_message)): ?>
             <div class="alert alert-danger border-0 shadow-sm mb-4" style="border-radius:16px;"><i class="bi bi-exclamation-circle"></i> <?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
@@ -1057,12 +1082,14 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             <div class="alert alert-success border-0 shadow-sm mb-4" style="border-radius:16px;"><i class="bi bi-check-circle"></i> <?= htmlspecialchars($success_message) ?></div>
         <?php endif; ?>
 
+        <!-- Page title and summary text for the accountant dashboard landing area. -->
         <section class="page-heading">
             <h1>Accountant Dashboard</h1>
             <p class="small">Manage attendance, payroll, expenses, and ledgers.</p>
         </section>
 
         <div class="tab-content" id="acctTabContent">
+            <!-- Payroll tab: calculate salary, overtime, and optional bonuses from attendance data. -->
             <div class="tab-pane fade <?= $active_tab === 'payroll' ? 'show active' : '' ?>" id="payroll" role="tabpanel" aria-labelledby="payroll-tab">
                 <div class="card border-0 shadow-sm p-4 rounded-4 mb-4">
                     <h4 class="fw-bold text-dark mb-1">Salary Calculator Portal</h4>
@@ -1168,6 +1195,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                 </div>
             </div>
 
+            <!-- Attendance tab: create, edit, delete, and review employee attendance records. -->
             <div class="tab-pane fade <?= $active_tab === 'attendanceTab' ? 'show active' : '' ?>" id="attendanceTab" role="tabpanel" aria-labelledby="attendanceTab-tab">
                 <div class="card p-4 content-section">
                     <h4 class="fw-bold mb-3 text-dark">Attendance Tracking Portal</h4>
@@ -1244,6 +1272,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                 </div>
             </div>
 
+            <!-- Expense tab: capture a new manual operating expense entry. -->
             <div class="tab-pane fade <?= $active_tab === 'expenses' ? 'show active' : '' ?>" id="expenses" role="tabpanel" aria-labelledby="expenses-tab">
                 <div class="card p-4 content-section">
                     <h4 class="fw-bold mb-3 text-dark">Manual Operating Expenses Registry</h4>
@@ -1279,6 +1308,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                 </div>
             </div>
 
+            <!-- Salary ledger tab: summarize the month's salary distribution by employee type. -->
             <div class="tab-pane fade <?= $active_tab === 'salaryLedger' ? 'show active' : '' ?>" id="salaryLedger" role="tabpanel" aria-labelledby="salaryLedger-tab">
                 <div class="card p-4 content-section">
                     <h4 class="fw-bold mb-4 text-dark">Salary Distribution Summary</h4>
@@ -1422,6 +1452,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                 </div>
             </div>
 
+            <!-- Expense ledger tab: list all recorded business expenses and allow deletions. -->
             <div class="tab-pane fade <?= $active_tab === 'expenseLedger' ? 'show active' : '' ?>" id="expenseLedger" role="tabpanel" aria-labelledby="expenseLedger-tab">
                 <div class="card p-4 content-section">
                     <h4 class="fw-bold mb-3 text-dark">Business Expenses Summary</h4>
@@ -1461,13 +1492,13 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                 </div>
             </div>
 
-            <!-- Reports Tab -->
+            <!-- Report tab: generate a monthly expense summary and export it in multiple formats. -->
             <div class="tab-pane fade <?= $active_tab === 'reports' ? 'show active' : '' ?>" id="reports" role="tabpanel" aria-labelledby="reports-tab">
                 <div class="card p-4 content-section">
                     <h4 class="fw-bold mb-3 text-dark">Monthly Expense Report Generator</h4>
                     <p class="text-muted small mb-4">Generate detailed monthly expense reports with export options.</p>
 
-                    <!-- Report Generator Form -->
+                    <!-- This form selects the month and year to aggregate into a report. -->
                     <form action="" method="POST" class="row g-3 mb-4 p-3 bg-light rounded-3">
                         <input type="hidden" name="action" value="generate_report">
                         <input type="hidden" name="tab_id" value="reports">
@@ -1506,7 +1537,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                     <!-- Report Display Section -->
                     <?php if ($report_generated && $current_report_data): ?>
                     <div id="reportContainer" class="mt-5">
-                        <!-- Report Header -->
+                        <!-- Report header: identifies the company, report ID, generation time, and covered period. -->
                         <div class="row mb-4 p-4 rounded-3" style="background: linear-gradient(135deg, #14532d 0%, #166534 52%, #15803d 100%); color: white;">
                             <div class="col-md-6">
                                 <h3 class="fw-bold mb-1">THARU PRODUCTS</h3>
@@ -1519,7 +1550,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                             </div>
                         </div>
 
-                        <!-- Expense Summary Table -->
+                        <!-- Expense table: breaks the report down by category and percentage of the total. -->
                         <div class="table-responsive mb-4">
                             <table class="table table-striped table-bordered align-middle">
                                 <thead class="table-dark">
@@ -1563,7 +1594,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                             </table>
                         </div>
 
-                        <!-- Bar Chart - Responsive with Chart.js -->
+                        <!-- Chart panel: renders the expense distribution visually using Chart.js. -->
                         <div class="card border-0 mb-4 p-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px;">
                             <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-bar-chart-fill me-2" style="color: #667eea;"></i>Expense Distribution</h5>
                             <p class="text-muted small mb-3">Visual breakdown of monthly expenses by category</p>
@@ -1572,7 +1603,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                             </div>
                         </div>
 
-                        <!-- Export Buttons -->
+                        <!-- Export actions: send the same report into PDF, XLSX, or JPEG output flows. -->
                         <div class="d-flex gap-2 justify-content-center mb-4 flex-wrap">
                             <form action="" method="POST" class="d-inline" target="_blank">
                                 <input type="hidden" name="action" value="export_report">
@@ -1608,6 +1639,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     </main>
 </div>
 
+<!-- Modal for reviewing payroll details before the salary payment is submitted. -->
 <div class="modal fade" id="payrollProcessingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form action="" method="POST" class="modal-content border-0 shadow-lg" style="border-radius:20px;">
@@ -1652,6 +1684,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     </div>
 </div>
 
+<!-- Modal for editing an existing salary ledger entry. -->
 <div class="modal fade" id="salaryEditModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form action="" method="POST" class="modal-content border-0 shadow-lg" style="border-radius:20px;">
@@ -1680,6 +1713,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     </div>
 </div>
 
+<!-- Modal for editing an existing attendance record. -->
 <div class="modal fade" id="attendanceEditModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form action="" method="POST" class="modal-content border-0 shadow-lg" style="border-radius:20px;">
@@ -1727,7 +1761,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Handle Custom Dropdown Selector Displays
+    // Toggle the custom expense field when the user selects the Other expense type.
     function toggleCustomExpenseBox(val) {
         const wrap = document.getElementById('customExpenseWrapper');
         if (val === 'Other') {
@@ -1739,7 +1773,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         }
     }
 
-    // Modal Interaction Handlers
+    // Initialize the reusable payroll modal and fill it with the selected attendance details.
     let myModal;
     document.addEventListener("DOMContentLoaded", function() {
         myModal = new bootstrap.Modal(document.getElementById('payrollProcessingModal'));
@@ -1750,7 +1784,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         document.getElementById('modalTargetName').innerText = "Process Run: " + empName;
         document.getElementById('modalTargetRole').innerText = empRole;
         
-        // Reset dynamic elements cleanly on form load initialization
+        // Clear modal-only inputs each time the payroll modal opens so old values do not leak through.
         document.getElementById('holidayBonusToggle').checked = false;
         const container = document.getElementById('bonusInputContainer');
         const field = document.getElementById('bonusAmountField');
@@ -1761,6 +1795,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         myModal.show();
     }
 
+    // Populate the salary edit modal with the selected record's current values.
     function openSalaryEditModal(salaryId, paydate, amount) {
         document.getElementById('salaryEditID').value = salaryId;
         document.getElementById('salaryEditPaydate').value = paydate;
@@ -1768,6 +1803,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         new bootstrap.Modal(document.getElementById('salaryEditModal')).show();
     }
 
+    // Populate the attendance edit modal with the selected record's current values.
     function openAttendanceEditModal(attendanceId, date, login, logout, userID) {
         document.getElementById('attendanceEditID').value = attendanceId;
         document.getElementById('attendanceEditDate').value = date;
@@ -1775,12 +1811,12 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         document.getElementById('attendanceEditLogout').value = logout;
 
         const editUserSelect = document.getElementById('attendanceEditUser');
-        // userID is the user_tbl.userID for the employee; set it directly
+        // The user ID comes from user_tbl, so assign it directly to the edit form.
         editUserSelect.value = userID || '';
         new bootstrap.Modal(document.getElementById('attendanceEditModal')).show();
     }
 
-    // Javascript Toggle Listener revealing or hiding the Manual Holiday Box component
+    // Show or hide the bonus amount input when the payroll bonus toggle changes.
     function toggleBonusInputBox(isChecked) {
         const container = document.getElementById('bonusInputContainer');
         const field = document.getElementById('bonusAmountField');
@@ -1796,6 +1832,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         }
     }
 
+    // Convert a time string into a Date object so work durations can be calculated.
     function parseTimeValue(inputValue) {
         if (!inputValue) {
             return null;
@@ -1810,6 +1847,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         return new Date(2000, 0, 1, hours, minutes, seconds);
     }
 
+    // Calculate overtime by subtracting the standard 8-hour workday from the shift length.
     function calculateOvertimeHours(loginValue, logoutValue) {
         const loginTime = parseTimeValue(loginValue);
         const logoutTime = parseTimeValue(logoutValue);
@@ -1824,6 +1862,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         return workedHours > 8 ? workedHours - 8 : 0;
     }
 
+    // Load salary rates from the selected employee and refresh the payroll summary.
     function loadEmployeeData() {
         const select = document.getElementById('employeeSelect');
         const selectedOption = select.options[select.selectedIndex];
@@ -1862,6 +1901,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         }
     }
 
+    // Load the selected attendance record and derive the wage, OT, and pay summary.
     function loadAttendanceData() {
         const select = document.getElementById('attendanceSelect');
         const selectedOption = select.options[select.selectedIndex];
@@ -1921,6 +1961,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         calculateTotalSalary();
     }
 
+    // Calculate total worked hours, including overnight shifts that cross midnight.
     function calculateWorkedHours(loginValue, logoutValue) {
         const loginTime = parseTimeValue(loginValue);
         const logoutTime = parseTimeValue(logoutValue);
@@ -1934,6 +1975,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         return workedMs / (1000 * 60 * 60);
     }
 
+    // Restrict the attendance dropdown to records that belong to the selected employee.
     function filterAttendanceRecords(selectedEmployeeId) {
         const attendanceSelect = document.getElementById('attendanceSelect');
         const attendanceSummary = document.getElementById('attendanceSummary');
@@ -1980,6 +2022,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         console.debug('Attendance filter', { selectedEmployeeId, visibleCount });
     }
 
+    // Enable or disable the bonus input and recalculate the total payout accordingly.
     function toggleBonusField() {
         const bonusToggle = document.getElementById('bonusToggle');
         const bonusInput = document.getElementById('bonusAmount');
@@ -1990,6 +2033,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         calculateTotalSalary();
     }
 
+    // Recompute the full payout from base pay, overtime, and bonus values.
     function calculateTotalSalary() {
         const baseSalary = parseFloat(document.getElementById('baseSalary').value) || 0;
         const otHours = parseFloat(document.getElementById('otHours').value) || 0;
@@ -2005,6 +2049,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         document.getElementById('displayTotalPayout').innerText = 'LKR ' + totalPayout.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    // Clear the payroll form back to its initial blank state.
     function resetSupervisorSalaryPortal() {
         document.getElementById('employeeSelect').selectedIndex = 0;
         document.getElementById('attendanceSelect').selectedIndex = 0;
@@ -2026,6 +2071,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     
     let expenseChartInstance = null;
     
+    // Build the report chart from the generated expense table values.
     function drawExpenseChart() {
         const canvas = document.getElementById('expenseChartCanvas');
         if (!canvas) return;
