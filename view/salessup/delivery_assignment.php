@@ -251,7 +251,6 @@ $conn->close();
             <div class="col-12 col-lg-4">
                 <div class="content-card h-100 mb-0">
                     <h6 class="fw-bold text-dark mb-3">Driver Availability Fleet</h6>
-                    <p class="text-muted small mb-4">Drivers are automatically marked unavailable while they have active assigned deliveries in transit.</p>
                     
                     <ul class="list-group list-group-flush border-0">
                         <?php if (!empty($availableDrivers)): ?>

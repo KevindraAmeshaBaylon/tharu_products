@@ -62,7 +62,7 @@ The system is built around **six role-based dashboards**, each scoped to exactly
 | Layer | Technology |
 |---|---|
 | **Frontend** | HTML5, CSS3, JavaScript, Bootstrap |
-| **Backend** | PHP (procedural, MySQLi) |
+| **Backend** | JavaScript, PHP (procedural, MySQLi) |
 | **Database** | MySQL 8.0+ |
 | **Local Environment** | XAMPP (Apache + MySQL + PHP) |
 | **Version Control** | Git & GitHub (feature-branch workflow) |

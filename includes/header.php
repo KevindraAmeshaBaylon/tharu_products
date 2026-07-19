@@ -26,6 +26,8 @@ if (session_status() === PHP_SESSION_NONE) {
     
     <!-- Bootstrap 5 CSS CDN for grid system, utilities, and styling components -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- ADD THIS LINE: Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <!-- Bootstrap Icons CDN --><style>
     :root {
         --dark-forest: #064e3b; /* Primary dark color (deep forest green) */

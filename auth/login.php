@@ -448,7 +448,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <!-- Action identifier for POST router -->
                 <input type="hidden" name="action" value="signup">
                 <h2>Join Us</h2>
-                <p class="mb-4 text-muted small">Register your new system access profile.</p>
+                <p class="mb-4 text-muted small">Register your new user profile.</p>
                 
                 <!-- Username field -->
                 <div class="mb-3">
@@ -477,7 +477,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <!-- Action identifier for POST router -->
                 <input type="hidden" name="action" value="signin">
                 <h2>Welcome</h2>
-                <p class="mb-4 text-muted small">Access your localized dashboard matrix.</p>
+                <p class="mb-4 text-muted small">Access your personalized workspace.</p>
                 
                 <!-- Username or email address field -->
                 <div class="mb-3">

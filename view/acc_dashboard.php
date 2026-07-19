@@ -34,7 +34,7 @@ $dashboardActionTabMap = [
     'export_report' => 'reports'
 ];
 
-function normalizeDashboardTab($tabId, $validTabs, $aliases, $fallbackTab = 'payroll') {
+function normalizeDashboardTab($tabId, $validTabs, $aliases, $fallbackTab = 'attendanceTab') {
     if (!is_string($tabId) || $tabId === '') {
         return $fallbackTab;
     }
@@ -80,7 +80,7 @@ $error_message = '';
 $success_message = '';
 $action = $_POST['action'] ?? '';
 $requestedTab = $_GET['tab_id'] ?? ($_POST['tab_id'] ?? '');
-$defaultTab = $dashboardActionTabMap[$action] ?? 'payroll';
+$defaultTab = $dashboardActionTabMap[$action] ?? 'attendanceTab';
 $active_tab = normalizeDashboardTab($requestedTab, $dashboardTabs, $dashboardTabAliases, $defaultTab);
 
 if ($action !== '' && isset($dashboardActionTabMap[$action])) {
@@ -450,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
                 $conn->commit();
                 $payTypeNote = ($baseSalaryExcluded) ? " [OT + Bonuses only — base salary paid earlier this month]" : "";
-                dashboardRedirectWithFlash('success', 'Payroll allocated cleanly! ' . number_format($total_amount_paid, 2) . ' LKR disbursed and tracked in operational expenses.' . $payTypeNote, 'payroll');
+                dashboardRedirectWithFlash('success', 'Payroll allocated cleanly! ' . number_format($total_amount_paid, 2) . ' LKR added to business expenses.' . $payTypeNote, 'payroll');
             } catch (Exception $e) {
                 $conn->rollback();
                 dashboardRedirectWithFlash('error', 'Relational engine rejected insert operation: ' . $e->getMessage(), 'payroll');
@@ -470,7 +470,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt = $conn->prepare("INSERT INTO expense_tbl (type, amount, accountantID, materialID) VALUES (?, ?, ?, NULL)");
         $stmt->bind_param("sdi", $final_type, $amount, $accountantID);
         if ($stmt->execute()) {
-            dashboardRedirectWithFlash('success', 'Manual overhead profile parsed and indexed correctly.', 'expenses');
+            dashboardRedirectWithFlash('success', 'Manual business expense added correctly.', 'expenses');
         } else {
             dashboardRedirectWithFlash('error', 'Fault in manual ledger population sequence execution.', 'expenses');
         }
@@ -688,10 +688,10 @@ $attendanceList = $conn->query("
              WHEN d.driverID IS NOT NULL THEN 'Driver'
            END as emp_role
     FROM attendance_tbl a
-    LEFT JOIN worker_tbl w ON a.attendanceID = w.attendanceID LEFT JOIN user_tbl wu ON w.userID = wu.userID
+        LEFT JOIN Worker_tbl w ON a.workerID = w.workerID LEFT JOIN user_tbl wu ON w.userID = wu.userID
     LEFT JOIN StockSuperviser_tbl s ON a.stocksupID = s.stocksupID LEFT JOIN user_tbl su ON s.userID = su.userID
     LEFT JOIN SalesSuperviser_tbl ss ON a.salessupID = ss.salessupID LEFT JOIN user_tbl ssu ON ss.userID = ssu.userID
-    LEFT JOIN driver_tbl d ON a.attendanceID = d.attendanceID LEFT JOIN user_tbl du ON d.userID = du.userID
+        LEFT JOIN Driver_tbl d ON a.driverID = d.driverID LEFT JOIN user_tbl du ON d.userID = du.userID
     LEFT JOIN salary_tbl sal ON a.attendanceID = sal.attendanceID
     WHERE sal.salaryID IS NULL 
       AND (w.workerID IS NOT NULL OR s.stocksupID IS NOT NULL OR ss.salessupID IS NOT NULL OR d.driverID IS NOT NULL)
@@ -868,6 +868,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
     <meta charset="UTF-8">
     <title>Accountant Dashboard - Tharu & Products Systems</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -1033,15 +1034,19 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             <img src="../images/LOGO.png" alt="Tharu Products" />
             <div class="sidebar-title">Tharu Accountant</div>
         </div>
+        <!-- side navigation buttons for different tabs -->
         <div class="sidebar-nav" role="tablist" aria-orientation="vertical">
-            <button class="<?= $active_tab === 'attendanceTab' ? 'active' : '' ?>" id="attendanceTab-tab" data-bs-toggle="pill" data-bs-target="#attendanceTab" type="button" role="tab" aria-controls="attendanceTab" aria-selected="<?= $active_tab === 'attendanceTab' ? 'true' : 'false' ?>"><i class="bi bi-calendar-check"></i> Attendance Tracking</button>
-            <button class="<?= $active_tab === 'payroll' ? 'active' : '' ?>" id="payroll-tab" data-bs-toggle="pill" data-bs-target="#payroll" type="button" role="tab" aria-controls="payroll" aria-selected="<?= $active_tab === 'payroll' ? 'true' : 'false' ?>"><i class="bi bi-calculator"></i> Payroll</button>
-            <button class="<?= $active_tab === 'expenses' ? 'active' : '' ?>" id="expenses-tab" data-bs-toggle="pill" data-bs-target="#expenses" type="button" role="tab" aria-controls="expenses" aria-selected="<?= $active_tab === 'expenses' ? 'true' : 'false' ?>"><i class="bi bi-receipt"></i> Manual Expenses</button>
-            <button class="<?= $active_tab === 'salaryLedger' ? 'active' : '' ?>" id="salaryLedger-tab" data-bs-toggle="pill" data-bs-target="#salaryLedger" type="button" role="tab" aria-controls="salaryLedger" aria-selected="<?= $active_tab === 'salaryLedger' ? 'true' : 'false' ?>"><i class="bi bi-book"></i> Salary Ledger</button>
-            <button class="<?= $active_tab === 'expenseLedger' ? 'active' : '' ?>" id="expenseLedger-tab" data-bs-toggle="pill" data-bs-target="#expenseLedger" type="button" role="tab" aria-controls="expenseLedger" aria-selected="<?= $active_tab === 'expenseLedger' ? 'true' : 'false' ?>"><i class="bi bi-list-check"></i> Expense Ledger</button>
-            <button class="<?= $active_tab === 'reports' ? 'active' : '' ?>" id="reports-tab" data-bs-toggle="pill" data-bs-target="#reports" type="button" role="tab" aria-controls="reports" aria-selected="<?= $active_tab === 'reports' ? 'true' : 'false' ?>"><i class="bi bi-bar-chart"></i> Reports</button>
+            <button class="<?= $active_tab === 'attendanceTab' ? 'active' : '' ?>" id="attendanceTab-tab" data-bs-toggle="pill" data-bs-target="#attendanceTab" type="button" role="tab" aria-controls="attendanceTab" aria-selected="<?= $active_tab === 'attendanceTab' ? 'true' : 'false' ?>"><i class="bi bi-calendar-check me-2"></i> Attendance Tracker</button>
+            <button class="<?= $active_tab === 'payroll' ? 'active' : '' ?>" id="payroll-tab" data-bs-toggle="pill" data-bs-target="#payroll" type="button" role="tab" aria-controls="payroll" aria-selected="<?= $active_tab === 'payroll' ? 'true' : 'false' ?>"><i class="bi bi-calculator me-2"></i> Payroll Calculator</button>
+            <button class="<?= $active_tab === 'expenses' ? 'active' : '' ?>" id="expenses-tab" data-bs-toggle="pill" data-bs-target="#expenses" type="button" role="tab" aria-controls="expenses" aria-selected="<?= $active_tab === 'expenses' ? 'true' : 'false' ?>"><i class="bi bi-receipt me-2"></i> Expense Tracker</button>
+            <button class="<?= $active_tab === 'salaryLedger' ? 'active' : '' ?>" id="salaryLedger-tab" data-bs-toggle="pill" data-bs-target="#salaryLedger" type="button" role="tab" aria-controls="salaryLedger" aria-selected="<?= $active_tab === 'salaryLedger' ? 'true' : 'false' ?>"><i class="bi bi-book me-2"></i> Salary Ledger</button>
+            <button class="<?= $active_tab === 'expenseLedger' ? 'active' : '' ?>" id="expenseLedger-tab" data-bs-toggle="pill" data-bs-target="#expenseLedger" type="button" role="tab" aria-controls="expenseLedger" aria-selected="<?= $active_tab === 'expenseLedger' ? 'true' : 'false' ?>"><i class="bi bi-list-check me-2"></i> Expense Ledger</button>
+            <button class="<?= $active_tab === 'reports' ? 'active' : '' ?>" id="reports-tab" data-bs-toggle="pill" data-bs-target="#reports" type="button" role="tab" aria-controls="reports" aria-selected="<?= $active_tab === 'reports' ? 'true' : 'false' ?>"><i class="bi bi-bar-chart me-2"></i> Report Generator</button>
         </div>
-        <a href="../auth/logout.php" class="btn btn-danger btn-sm mt-auto w-100">Sign out user</a>
+        <a href="../auth/logout.php" class="btn btn-danger fs-6 btn-sm mt-auto w-100 d-flex align-items-center justify-content-center gap-2">
+            <i class="bi bi-box-arrow-right"></i> 
+            Sign out user
+        </a>
     </aside>
 
     <main class="dashboard-main">
@@ -1060,7 +1065,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
         <div class="tab-content" id="acctTabContent">
             <div class="tab-pane fade <?= $active_tab === 'payroll' ? 'show active' : '' ?>" id="payroll" role="tabpanel" aria-labelledby="payroll-tab">
                 <div class="card border-0 shadow-sm p-4 rounded-4 mb-4">
-                    <h4 class="fw-bold text-dark mb-1"><i class="bi bi-calculator-fill me-2 text-success"></i>Salary Calculator Portal</h4>
+                    <h4 class="fw-bold text-dark mb-1">Salary Calculator Portal</h4>
                     <p class="text-muted small mb-4">Add salary and salary-related payments (OT, holiday bonuses) for permanent and daily workers.</p>
 
                     <form action="" method="POST" id="salaryForm">
@@ -1155,7 +1160,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                         <h6 class="text-success fw-bold text-uppercase mb-1 small">Total Calculated Salary Payment</h6>
                                         <div class="fs-2 fw-bold text-dark" id="displayTotalPayout">LKR 0.00</div>
                                     </div>
-                                    <button type="submit" class="btn btn-success px-4 py-2 fw-bold rounded-pill shadow-sm">Authorize Salary Payment</button>
+                                    <button type="submit" class="btn btn-success px-4 py-2 fw-bold rounded-pill shadow-sm">Add Salary Payment</button>
                                 </div>
                             </div>
                         </div>
@@ -1217,7 +1222,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                         <tr>
                                             <td><?= htmlspecialchars($att['date']) ?></td>
                                             <td><?= htmlspecialchars($att['emp_name']) ?></td>
-                                            <td><span class="badge bg-secondary text-dark rounded-pill"><?= htmlspecialchars($att['emp_role']) ?></span></td>
+                                            <td><span class="badge border border-dark text-dark rounded-pill"><?= htmlspecialchars($att['emp_role']) ?></span></td>                                            <td><?= htmlspecialchars($att['login']) ?></td>
                                             <td><?= htmlspecialchars($att['login']) ?></td>
                                             <td><?= htmlspecialchars($att['logout']) ?></td>
                                             <td class="text-center">
@@ -1232,7 +1237,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="6" class="text-center text-muted py-4">No attendance records have been entered yet.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted py-4">No unpaid attendance records have been entered yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -1243,7 +1248,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             <div class="tab-pane fade <?= $active_tab === 'expenses' ? 'show active' : '' ?>" id="expenses" role="tabpanel" aria-labelledby="expenses-tab">
                 <div class="card p-4 content-section">
                     <h4 class="fw-bold mb-3 text-dark">Manual Operating Expenses Registry</h4>
-                    <p class="text-muted small mb-3">Create new manual expenses here. Use the Expense Ledger tab for edit and delete operations.</p>
+                    <p class="text-muted small mb-3">Create new manual expenses here. Use the Expense Ledger tab for delete operations.</p>
                     <form action="" method="POST">
                         <input type="hidden" name="action" value="log_expense">
                         <input type="hidden" name="tab_id" value="expenses">
@@ -1253,36 +1258,36 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                                 <option value="Machine Maintainance Costs">Machine Maintainance Costs</option>
                                 <option value="Utility Bills">Utility Bills</option>
                                 <option value="Raw Material Purchases">Raw Material Purchases</option>
-                                <option value="Other">Other / Custom Description Override</option>
+                                <option value="Other">Miscellaneous</option>
                             </select>
                         </div>
 
                         <div id="customExpenseWrapper" class="mb-3 d-none">
-                            <label class="form-label small fw-semibold">Specify Custom Description</label>
+                            <label class="form-label small fw-semibold">Specify expense Description</label>
                             <input type="text" name="custom_expense_type" class="form-control" placeholder="e.g. Factory Office Repairs">
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label small fw-semibold">Amount Disbursed (LKR)</label>
+                            <label class="form-label small fw-semibold">Amount Distributed (LKR)</label>
                             <input type="number" step="0.01" min="1" name="amount" class="form-control" placeholder="0.00" required>
                         </div>
 
-                        <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 fw-bold">Log Financial Expense</button>
+                        <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 fw-bold">Add Business Expense</button>
                     </form>
                     <div class="mt-3 text-end">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('expenseLedger-tab').click()">Go to Expense Ledger (Edit/Delete)</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('expenseLedger-tab').click()">Go to Expense Ledger</button>
                     </div>
                 </div>
             </div>
 
             <div class="tab-pane fade <?= $active_tab === 'salaryLedger' ? 'show active' : '' ?>" id="salaryLedger" role="tabpanel" aria-labelledby="salaryLedger-tab">
                 <div class="card p-4 content-section">
-                    <h4 class="fw-bold mb-4 text-success">Salary Disbursements Summary Ledger</h4>
+                    <h4 class="fw-bold mb-4 text-dark">Salary Distribution Summary</h4>
                     <p class="text-muted small mb-4">Monthly salary overview for all employees, grouped by role.</p>
 
                     <!-- Stock Supervisors Section -->
                     <div class="mb-5">
-                        <h5 class="fw-bold text-secondary mb-3">Stock Supervisors (Monthly Salary)</h5>
+                        <h5 class="fw-bold text-secondary mb-3">Stock Supervisor (Monthly Salary)</h5>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover border-top">
                                 <thead class="table-light">
@@ -1317,7 +1322,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
 
                     <!-- Sales Supervisors Section -->
                     <div class="mb-5">
-                        <h5 class="fw-bold text-secondary mb-3">Sales Supervisors (Monthly Salary)</h5>
+                        <h5 class="fw-bold text-secondary mb-3">Sales Supervisor (Monthly Salary)</h5>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover border-top">
                                 <thead class="table-light">
@@ -1420,14 +1425,14 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
 
             <div class="tab-pane fade <?= $active_tab === 'expenseLedger' ? 'show active' : '' ?>" id="expenseLedger" role="tabpanel" aria-labelledby="expenseLedger-tab">
                 <div class="card p-4 content-section">
-                    <h4 class="fw-bold mb-3 text-dark">Combined General Expense Ledger</h4>
+                    <h4 class="fw-bold mb-3 text-dark">Business Expenses Summary</h4>
                     <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
                         <table class="table table-sm text-center border-top">
                             <thead class="table-light">
                                 <tr>
                                     <th>ID</th>
-                                    <th>Expense Classification Type</th>
-                                    <th>Disbursed Amount</th>
+                                    <th>Expense Type</th>
+                                    <th>Distributed Amount</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -1460,8 +1465,8 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
             <!-- Reports Tab -->
             <div class="tab-pane fade <?= $active_tab === 'reports' ? 'show active' : '' ?>" id="reports" role="tabpanel" aria-labelledby="reports-tab">
                 <div class="card p-4 content-section">
-                    <h4 class="fw-bold mb-3 text-dark"><i class="bi bi-graph-up me-2"></i>Monthly Expense Report Generator</h4>
-                    <p class="text-muted small mb-4">Generate comprehensive monthly expense reports with breakdown and export options.</p>
+                    <h4 class="fw-bold mb-3 text-dark">Monthly Expense Report Generator</h4>
+                    <p class="text-muted small mb-4">Generate detailed monthly expense reports with export options.</p>
 
                     <!-- Report Generator Form -->
                     <form action="" method="POST" class="row g-3 mb-4 p-3 bg-light rounded-3">
@@ -1494,7 +1499,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <button type="submit" class="btn btn-success w-100 shadow-sm fw-semibold">
-                                <i class="bi bi-file-earmark-text me-2"></i>Generate Report
+                                <i class="bi bi-file-earmark-text me-2"></i>Generate Expense Report
                             </button>
                         </div>
                     </form>
@@ -1634,7 +1639,7 @@ $salaryAttendance = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logo
                 </div>
 
                 <div id="bonusInputContainer" class="mb-2 d-none">
-                    <label class="form-label small fw-bold text-success">Manual Holiday Premium Amount (LKR)</label>
+                    <label class="form-label small fw-bold text-success">Manual Holiday Bonus Amount (LKR)</label>
                     <input type="number" step="0.01" min="0" id="bonusAmountField" name="bonus_amount" class="form-control" value="0.00">
                 </div>
 
