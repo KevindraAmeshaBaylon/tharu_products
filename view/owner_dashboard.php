@@ -1,30 +1,48 @@
 <?php
-// owner/dashboard.php
+/**
+ * Owner Dashboard Portal
+ * File: owner/dashboard.php
+ * 
+ * This file serves as the main administrative interface for the business owner.
+ * It provides a comprehensive view of:
+ * - Sales and Expense Analytics (Charts and Data Grids)
+ * - Salary Provisioning (OT and Monthly Salary Calculators)
+ * - Payout Ledger and Status Logs
+ * - Customer Profile Index
+ * - System Operator/Employee CRUD Actions
+ * - Generation and downloading of Monthly Profit Reports
+ */
+
+// Initialize the session to access global user data
 session_start();
 
-// 1. Basic Session Guard
+// 1. Basic Session Guard: Restrict access exclusively to users with the 'owner' role
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'owner') {
+    // Redirect unauthorized users to the login screen
     header("Location: ../auth/login.php");
     exit;
 }
 
 // 2. Database Connection Wrapper
-// Adjust your path to wherever your database config sits (e.g., config.php or db.php)
-// Make sure your config file defines a working $conn PDO or mysqli instance.
+// Requires the central database configuration and establishes a connection instance
 require_once __DIR__ . '/../model/config/database.php'; 
-
-$conn=getDBConnection(); // Assuming getDBConnection() returns a PDO or mysqli connection
+$conn = getDBConnection();
 
 // --- AJAX Salary Details Endpoint ---
+// This endpoint dynamically fetches an employee's base salary and accumulated OT amount for a given month.
 if (isset($_GET['ajax_action']) && $_GET['ajax_action'] === 'get_salary_details') {
-    header('Content-Type: application/json');
+    header('Content-Type: application/json'); // Set header for JSON response
+    
+    // Sanitize input parameters
     $emp_id = intval($_GET['employee_id'] ?? 0);
     $month = trim($_GET['month'] ?? date('Y-m'));
+    
+    // Validate month format (YYYY-MM)
     if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
         $month = date('Y-m');
     }
     
-    // Fetch accountant details
+    // Fetch accountant details (base salary and OT rate) for the specified user
     $acc_stmt = $conn->prepare("SELECT accountantID, base_salary, OT_rate FROM accountant_tbl WHERE userID = ? LIMIT 1");
     if ($acc_stmt) {
         $acc_stmt->bind_param("i", $emp_id);
@@ -35,22 +53,27 @@ if (isset($_GET['ajax_action']) && $_GET['ajax_action'] === 'get_salary_details'
             $accountant_id = (int)$acc['accountantID'];
             $base_salary = (float)$acc['base_salary'];
             
-            // Sum up OT amounts for the selected month from salary_tbl, ignoring records where totamtpaid >= base_salary
+            // Sum up OT amounts for the selected month from salary_tbl.
+            // It ignores records where the total amount paid >= base_salary (assuming those are final salary payouts, not OT records).
             $sal_stmt = $conn->prepare("SELECT totamtpaid FROM salary_tbl WHERE accountantID = ? AND DATE_FORMAT(paydate, '%Y-%m') = ?");
             if ($sal_stmt) {
                 $sal_stmt->bind_param("is", $accountant_id, $month);
                 $sal_stmt->execute();
                 $sal_res = $sal_stmt->get_result();
+                
                 $sum_ot = 0;
                 $ot_records_count = 0;
+                
                 while ($s_row = $sal_res->fetch_assoc()) {
                     $amt = (float)$s_row['totamtpaid'];
                     if ($amt >= $base_salary) {
-                        continue;
+                        continue; // Skip final salary entries
                     }
                     $sum_ot += $amt;
                     $ot_records_count++;
                 }
+                
+                // Return data as JSON for the frontend to process
                 echo json_encode([
                     'status' => 'success',
                     'base_salary' => $base_salary,
@@ -67,10 +90,11 @@ if (isset($_GET['ajax_action']) && $_GET['ajax_action'] === 'get_salary_details'
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Statement preparation failed.']);
     }
-    exit;
+    exit; // Terminate script execution after handling AJAX request
 }
 
 // 🔌 Dynamic Global Header File Included
+// Loads styles, fonts, and meta tags common to the application layout
 include_once __DIR__ . '/../includes/header.php'; 
 
 
@@ -78,12 +102,16 @@ include_once __DIR__ . '/../includes/header.php';
 // 3. DATABASE CONTROLLER LOGIC FOR ACTIONS
 // ==========================================
 
-// Handle Salary Provision Authorization Form Submission
+// Determines which tab should be active by default or after form submission
 $active_tab = $_GET['tab'] ?? ($_POST['tab'] ?? 'panel-analytics');
+
+// Initialization of feedback message variables
 $salary_success_msg = "";
 $salary_error_msg = "";
 $report_success_msg = "";
 $report_error_msg = "";
+
+// Variables to hold report generation data
 $selected_report_month = trim((string)($_POST['report_month'] ?? date('Y-m')));
 $selected_report_month = preg_match('/^\d{4}-\d{2}$/', $selected_report_month) ? $selected_report_month : date('Y-m');
 $report_sales_total = 0.0;
@@ -95,18 +123,24 @@ $report_generated = false;
 $report_chart_labels = ['Sales', 'Expenses', 'Net Profit'];
 $report_chart_values = [0, 0, 0];
 $download_format = strtolower(trim((string)($_POST['download_format'] ?? 'pdf')));
+
+// Validate download format
 if (!in_array($download_format, ['pdf', 'xlsx', 'png', 'jpeg'], true)) {
     $download_format = 'pdf';
 }
 $auto_download_format = '';
 
+// Process POST requests related to actions on the dashboard
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    
+    // Action: Record calculated Overtime (OT) Amount
     if ($_POST['action'] === 'record_ot_amount') {
         $emp_id = intval($_POST['employee_id'] ?? 0);
         $ot_pay = floatval($_POST['ot_pay'] ?? 0);
         $attendance_id = intval($_POST['attendance_id'] ?? 0);
         $accountant_id = null;
 
+        // Resolve accountant ID based on selected user ID
         $accountantLookup = $conn->prepare('SELECT accountantID FROM accountant_tbl WHERE userID = ? LIMIT 1');
         if ($accountantLookup) {
             $accountantLookup->bind_param('i', $emp_id);
@@ -117,15 +151,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
 
+        // Validate resolved IDs and payment amount
         if ($accountant_id > 0 && $attendance_id > 0 && $ot_pay > 0) {
-            // Check if OT amount is already recorded for this attendance record
+            // Check if OT amount is already recorded to prevent duplicate records
             $check_stmt = $conn->prepare('SELECT salaryID FROM salary_tbl WHERE attendanceID = ? AND accountantID = ? AND totamtpaid = ?');
             $check_stmt->bind_param('iid', $attendance_id, $accountant_id, $ot_pay);
             $check_stmt->execute();
             $check_res = $check_stmt->get_result();
+            
             if ($check_res->num_rows > 0) {
                 $salary_error_msg = 'This OT amount has already been recorded for this attendance record.';
             } else {
+                // Insert OT record into the salary table
                 $stmt = $conn->prepare('INSERT INTO salary_tbl (paydate, totamtpaid, attendanceID, accountantID) VALUES (CURDATE(), ?, ?, ?)');
                 if ($stmt) {
                     $stmt->bind_param('dii', $ot_pay, $attendance_id, $accountant_id);
@@ -140,16 +177,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $salary_error_msg = 'Please choose a valid accountant, attendance record, and make sure OT pay is calculated.';
         }
-        $active_tab = 'panel-salary';
+        $active_tab = 'panel-salary'; // Keep user on the salary tab
     }
 
+    // Action: Record the total finalized Monthly Salary
     if ($_POST['action'] === 'record_total_salary') {
         $emp_id = intval($_POST['employee_id'] ?? 0);
         $total_salary = floatval($_POST['total_salary'] ?? 0);
         $paydate = trim($_POST['paydate'] ?? date('Y-m-d'));
         
-        // Find accountant_id and a valid attendanceID to satisfy FK constraint
         $accountant_id = null;
+        
+        // Find corresponding accountant ID
         $accountantLookup = $conn->prepare('SELECT accountantID FROM accountant_tbl WHERE userID = ? LIMIT 1');
         if ($accountantLookup) {
             $accountantLookup->bind_param('i', $emp_id);
@@ -161,6 +200,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         $attendance_id = 0;
+        
+        // Fetch the most recent attendance ID to satisfy Foreign Key constraints in the salary table
         if ($accountant_id > 0) {
             $attLookup = $conn->prepare('SELECT attendanceID FROM attendance_tbl WHERE accountantID = ? ORDER BY date DESC LIMIT 1');
             if ($attLookup) {
@@ -173,6 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
 
+        // Insert final salary record
         if ($accountant_id > 0 && $attendance_id > 0 && $total_salary > 0) {
             $stmt = $conn->prepare('INSERT INTO salary_tbl (paydate, totamtpaid, attendanceID, accountantID) VALUES (?, ?, ?, ?)');
             if ($stmt) {
@@ -191,14 +233,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
-// Handle Staff Removal Request (CRUD)
+// Action: Handle Staff Deletion via GET request
 if (isset($_GET['delete_staff'])) {
     $del_id = intval($_GET['delete_staff']);
+    
+    // Prevent the master owner account from being accidentally deleted
     $deleteUser = $conn->prepare('DELETE FROM user_tbl WHERE userID = ? AND username != ?');
     if ($deleteUser) {
-        $ownerUsername = 'r.tharu';
+        $ownerUsername = 'r.tharu'; // Hardcoded master owner username
         $deleteUser->bind_param('is', $del_id, $ownerUsername);
+        
         if ($deleteUser->execute()) {
+            // Reload the page pointing directly to the employees panel
             header('Location: owner_dashboard.php?tab=panel-employees#panel-employees');
             exit;
         } else {
@@ -208,10 +254,13 @@ if (isset($_GET['delete_staff'])) {
     }
 }
 
+// Action: Update a staff member's role
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_staff') {
     $user_id = intval($_POST['user_id'] ?? 0);
     $new_role = strtolower(trim((string)($_POST['role'] ?? '')));
     $allowed_roles = ['owner', 'stocksup', 'accountant', 'salessup', 'worker', 'driver', 'cust'];
+    
+    // Validate inputs against allowed roles
     if ($user_id > 0 && in_array($new_role, $allowed_roles, true)) {
         $stmt = $conn->prepare('UPDATE user_tbl SET role = ? WHERE userID = ?');
         if ($stmt) {
@@ -226,12 +275,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Action: Generate a Monthly Profit Report
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'generate_profit_report') {
     $selected_report_month = trim((string)($_POST['report_month'] ?? date('Y-m')));
     if (!preg_match('/^\d{4}-\d{2}$/', $selected_report_month)) {
         $selected_report_month = date('Y-m');
     }
 
+    // Retrieve owner's ID
     $ownerLookup = $conn->prepare('SELECT ownerID FROM owner_tbl WHERE userID = ? LIMIT 1');
     $owner_id = 0;
     if ($ownerLookup) {
@@ -243,6 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
+    // Fetch all sales (orders) for the selected month that are not cancelled
     $report_sales_rows = [];
     $salesStmt = $conn->prepare("SELECT orderID, date, totamt, customerID FROM order_tbl WHERE DATE_FORMAT(date, '%Y-%m') = ? AND cancelled = 0 ORDER BY date DESC, orderID DESC");
     if ($salesStmt) {
@@ -255,6 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $salesStmt->close();
     }
 
+    // Fetch all expenses tied to the selected month via expense reports tables
     $report_expense_rows = [];
     $expensesStmt = $conn->prepare("SELECT e.expenseID, e.type, e.amount, e.accountantID FROM expense_tbl e LEFT JOIN Exp_Report_tbl er ON er.expenseID = e.expenseID LEFT JOIN ExpenseReport_tbl ep ON ep.expenserepID = er.expenserepID WHERE ep.month = ? ORDER BY e.expenseID DESC");
     if ($expensesStmt) {
@@ -267,30 +320,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $expensesStmt->close();
     }
 
+    // Calculate totals for reporting
     $report_sales_total = 0.0;
     foreach ($report_sales_rows as $row) {
         $report_sales_total += (float)($row['totamt'] ?? 0);
     }
+    
     $report_expenses_total = 0.0;
     foreach ($report_expense_rows as $row) {
         $report_expenses_total += (float)($row['amount'] ?? 0);
     }
+    
+    // Derive net profit
     $report_net_profit = $report_sales_total - $report_expenses_total;
+    
+    // Prepare chart payloads
     $report_chart_labels = ['Sales', 'Expenses', 'Net Profit'];
     $report_chart_values = [$report_sales_total, $report_expenses_total, $report_net_profit];
 
+    // Prevent generation of completely empty reports
     if ($report_sales_total <= 0 && $report_expenses_total <= 0) {
         $report_error_msg = 'No sales were recorded for the selected month, so no report was generated.';
         $report_generated = false;
         $active_tab = 'panel-reports';
     } else {
+        // Save report metadata into the database
         $insertStmt = $conn->prepare('INSERT INTO ProfitReport_tbl (month, ownerID) VALUES (?, ?)');
         if ($insertStmt && $owner_id > 0) {
             $insertStmt->bind_param('si', $selected_report_month, $owner_id);
             if ($insertStmt->execute()) {
                 $report_success_msg = 'Monthly profit report prepared for download for ' . htmlspecialchars($selected_report_month) . '.';
                 $report_generated = true;
-                $auto_download_format = $download_format;
+                $auto_download_format = $download_format; // Trigger automatic download via JS later
                 $active_tab = 'panel-reports';
             } else {
                 $report_error_msg = 'Could not save the profit report: ' . $insertStmt->error;
@@ -310,27 +371,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // 4. DATA ENGINE: FETCHING REAL DATABASE METRICS
 // ==========================================
 
-// 1. Initialize default values
+// Initialize default system totals for analytics
 $total_sales = 0;
 $total_expenses = 0;
 
-// 2. Sales totals from Order_tbl (the live order table)
+// Gather total sales from the current month
 $sales_query = $conn->query("SELECT COALESCE(SUM(totamt), 0) as total FROM order_tbl WHERE MONTH(date) = MONTH(CURRENT_DATE()) AND YEAR(date) = YEAR(CURRENT_DATE())");
 if ($sales_query) {
     $sales_data = $sales_query->fetch_assoc();
     $total_sales = floatval($sales_data['total'] ?? 0);
 }
 
-// 3. Expense totals from Expense_tbl (the live expense table)
+// Gather all-time total expenses
 $expense_query = $conn->query("SELECT COALESCE(SUM(amount), 0) as total FROM expense_tbl");
 if ($expense_query) {
     $expense_data = $expense_query->fetch_assoc();
     $total_expenses = floatval($expense_data['total'] ?? 0);
 }
 
+// Computations for quick analytics overview
 $net_profit = $total_sales - $total_expenses;
 $profit_margin = ($total_sales > 0) ? round(($net_profit / $total_sales) * 100) : 0;
 
+// Arrays for the current month's sales list
 $monthStart = date('Y-m-01');
 $monthEnd = date('Y-m-t');
 $monthly_sales_rows = [];
@@ -341,6 +404,7 @@ if ($monthly_sales_query) {
     }
 }
 
+// Arrays for expense lists
 $monthly_expense_rows = [];
 $monthly_expense_query = $conn->query("SELECT expenseID, type, amount, accountantID FROM expense_tbl ORDER BY expenseID DESC");
 if ($monthly_expense_query) {
@@ -349,13 +413,13 @@ if ($monthly_expense_query) {
     }
 }
 
-// --- Real chart datasets sourced from the database tables ---
-// Sales sparkline: last 7 orders (real amounts)
+// --- Data sets for dashboard charts ---
+// Sales sparkline uses the last 7 orders
 $sales_chart_values = array_reverse(array_slice(array_column($monthly_sales_rows, 'totamt'), -7));
 $sales_chart_labels = array_reverse(array_slice(array_map(function($r){ return '#ORD-' . $r['orderID']; }, $monthly_sales_rows), -7));
 if (empty($sales_chart_values)) { $sales_chart_values = [0]; $sales_chart_labels = ['No Sales']; }
 
-// Expense breakdown by type (real amounts)
+// Aggregate expenses by category type
 $expense_types = [];
 foreach ($monthly_expense_rows as $exp) {
     $type = $exp['type'] ?? 'Other';
@@ -365,7 +429,7 @@ $expense_chart_labels = array_keys($expense_types);
 $expense_chart_values = array_values($expense_types);
 if (empty($expense_chart_values)) { $expense_chart_values = [0]; $expense_chart_labels = ['No Expenses']; }
 
-// Wave chart: monthly sales vs expenses for the last 6 months (real data)
+// Generate data for the 6-month historical wave chart
 $wave_labels = [];
 $wave_sales = [];
 $wave_expenses = [];
@@ -377,11 +441,12 @@ for ($i = 5; $i >= 0; $i--) {
     $em = $conn->query("SELECT COALESCE(SUM(amount),0) e FROM expense_tbl WHERE DATE_FORMAT(date,'%Y-%m') = DATE_FORMAT('$d','%Y-%m')");
     $wave_expenses[] = floatval($em && $em->num_rows ? ($em->fetch_assoc()['e'] ?? 0) : 0);
 }
+// Append the current active total
 $wave_sales[] = $total_sales;
 $wave_expenses[] = $total_expenses;
 $wave_labels[] = 'Now';
 
-// Fetch staff members and salary-related data using the actual schema
+// Compile comprehensive staff member details for roles and salaries
 $staff_members = [];
 $staff_query = $conn->query("SELECT u.userID as id, u.username, u.role, COALESCE(a.accountantID, 0) as accountantID, COALESCE(a.base_salary, 0) as base_salary, COALESCE(a.OT_rate, 0) as ot_rate, COALESCE(s.stocksupID, 0) as stocksupID, COALESCE(l.salessupID, 0) as salessupID FROM user_tbl u LEFT JOIN accountant_tbl a ON a.userID = u.userID LEFT JOIN stocksuperviser_tbl s ON s.userID = u.userID LEFT JOIN salessuperviser_tbl l ON l.userID = u.userID WHERE u.username != 'r.tharu' ORDER BY u.userID");
 if ($staff_query) {
@@ -399,7 +464,7 @@ if ($staff_query) {
     }
 }
 
-// Attendance records for the salary calculator (accountant attendance rows)
+// Collect attendance rows specifically for accountants to calculate their OT
 $attendance_rows = [];
 $attendance_query = $conn->query("SELECT a.attendanceID, a.date, a.login, a.logout, a.accountantID, ac.accountantname, ac.base_salary, ac.OT_rate FROM attendance_tbl a LEFT JOIN accountant_tbl ac ON ac.accountantID = a.accountantID WHERE a.accountantID IS NOT NULL ORDER BY a.date DESC, a.attendanceID DESC");
 if ($attendance_query) {
@@ -408,7 +473,7 @@ if ($attendance_query) {
     }
 }
 
-// Fetch Active Customer Index
+// Fetch list of active customers
 $customers = [];
 $cust_query = $conn->query("SELECT c.userID as user_id, c.customerID, u.username, u.email, u.createdAt, c.companyname FROM customer_tbl c JOIN user_tbl u ON u.userID = c.userID ORDER BY c.customerID DESC LIMIT 20");
 if ($cust_query) {
@@ -422,7 +487,7 @@ if ($cust_query) {
     }
 }
 
-// Fetch salary payment history from salary_tbl
+// Pull historical payroll payouts from salary records
 $payroll_history = [];
 $ledger_query = $conn->query("SELECT s.salaryID as id, u.username, s.totamtpaid as total_paid, s.paydate, CONCAT('PAID & VERIFIED') as settlement_status FROM salary_tbl s JOIN accountant_tbl a ON a.accountantID = s.accountantID JOIN user_tbl u ON u.userID = a.userID ORDER BY s.paydate DESC, s.salaryID DESC");
 if ($ledger_query) {
@@ -431,7 +496,7 @@ if ($ledger_query) {
     }
 }
 
-// Retrieve generated profit reports for the owner
+// Retrieve index of generated profit reports to list in the reports tab
 $generated_reports = [];
 $generatedReportsQuery = $conn->query("SELECT profitrepID, month, genaratedAt, ownerID FROM ProfitReport_tbl ORDER BY genaratedAt DESC LIMIT 20");
 if ($generatedReportsQuery) {
@@ -447,20 +512,23 @@ if ($generatedReportsQuery) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Owner Dashboard - Tharu & Products Systems</title>
-    <!-- Bootstrap 5 CSS -->
+    <!-- Include Core Bootstrap Framework files -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Shared typography (matches Customer Dashboard) -->
+    
+    <!-- Modern Typography definitions from Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <!-- Chart.js Engine CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.2/xlsx.full.min.js"></script>
+    
+    <!-- Third Party Scripts for Charts and Report Downloading Tools -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> <!-- For image capturing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <!-- For PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.2/xlsx.full.min.js"></script> <!-- For Excel/XLSX support -->
     
     <style>
+        /* CSS Root Variables defining standard dashboard colors */
         :root {
             --sidebar-bg: rgba(11, 26, 16, 0.92);
             --sidebar-active: rgba(46, 125, 50, 0.35);
@@ -472,6 +540,7 @@ if ($generatedReportsQuery) {
             --mint-highlight: #6ee7b7;
         }
 
+        /* Ambient styling for the main document body */
         body {
             background-color: var(--canvas-bg);
             background-image:
@@ -484,11 +553,13 @@ if ($generatedReportsQuery) {
             margin: 0;
         }
 
+        /* Flexbox wrapper to position sidebar and content */
         .dashboard-wrapper {
             display: flex;
             position: relative;
         }
 
+        /* Left fixed sidebar styles */
         .sidebar-panel {
             width: 260px;
             background: var(--sidebar-bg);
@@ -509,6 +580,7 @@ if ($generatedReportsQuery) {
             box-shadow: 6px 0 30px rgba(2, 44, 34, 0.08);
         }
 
+        /* Main content canvas, offset by sidebar width */
         .main-content {
             flex-grow: 1;
             margin-left: 260px;
@@ -518,6 +590,7 @@ if ($generatedReportsQuery) {
             z-index: 1;
         }
 
+        /* Navigation menu link standard styling and hover effects */
         .nav-dash-link {
             display: flex;
             align-items: center;
@@ -535,17 +608,22 @@ if ($generatedReportsQuery) {
             position: relative;
             overflow: hidden;
         }
+        
         .nav-dash-link:hover {
             background-color: rgba(255, 255, 255, 0.06);
             color: #ffffff;
             transform: translateX(4px);
         }
+        
+        /* Styles denoting the current active navigation item */
         .nav-dash-link.active {
             background-color: var(--sidebar-active);
             color: #ffffff;
             border-color: rgba(52, 211, 153, 0.35);
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255,255,255,0.12);
         }
+        
+        /* Left border indicator highlighting the active tab */
         .nav-dash-link.active::before {
             content: "";
             position: absolute;
@@ -563,6 +641,7 @@ if ($generatedReportsQuery) {
             object-fit: contain;
         }
 
+        /* Sign-out button region at sidebar bottom */
         .sidebar-profile-footer {
             padding: 1rem;
             background: rgba(255, 255, 255, 0.05);
@@ -572,7 +651,9 @@ if ($generatedReportsQuery) {
             backdrop-filter: blur(6px);
         }
 
-        /* GLASSMORPHISM CARDS (matching homepage / customer dashboard) */
+        /* GLASSMORPHISM CARDS (Used to match homepage/customer dashboards theme) */
+        
+        /* Darker card configuration */
         .stat-card-dark {
             background: linear-gradient(135deg, rgba(11, 26, 16, 0.92), rgba(5, 46, 43, 0.85)) !important;
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -583,12 +664,14 @@ if ($generatedReportsQuery) {
             box-shadow: 0 14px 34px rgba(2, 44, 34, 0.18);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        
         .stat-card-dark:hover {
             transform: translateY(-6px);
             border-color: rgba(110, 231, 183, 0.5);
             box-shadow: 0 20px 44px rgba(2, 44, 34, 0.24);
         }
 
+        /* Lighter card configuration */
         .stat-card-light {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(240, 253, 244, 0.55)) !important;
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -598,18 +681,21 @@ if ($generatedReportsQuery) {
             box-shadow: 0 14px 34px rgba(2, 44, 34, 0.06), inset 0 1px 0 rgba(255,255,255,0.85);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        
         .stat-card-light:hover {
             transform: translateY(-6px);
             border-color: rgba(52, 211, 153, 0.7);
             box-shadow: 0 20px 40px rgba(2, 44, 34, 0.1), inset 0 1px 0 rgba(255,255,255,0.9);
         }
 
+        /* Number readout sizing */
         .metric-value {
             font-size: 1.85rem;
             font-weight: 700;
             letter-spacing: -0.5px;
         }
 
+        /* Standard content card */
         .card {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(240, 253, 244, 0.55)) !important;
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -620,6 +706,7 @@ if ($generatedReportsQuery) {
         }
         .card:hover { transform: translateY(-3px); }
 
+        /* Small widget cards containing mini analytics charts */
         .mini-chart-card {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(236, 253, 245, 0.6)) !important;
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -628,9 +715,11 @@ if ($generatedReportsQuery) {
             box-shadow: 0 12px 30px rgba(2, 44, 34, 0.06);
         }
 
+        /* Smooth tab transition animations */
         .tab-pane.fade { transition: opacity 0.35s ease, transform 0.35s ease; }
         .tab-pane.fade:not(.show) { transform: translateY(8px); }
 
+        /* Custom design for html tables */
         .custom-table th {
             background-color: rgba(46, 125, 50, 0.08) !important;
             color: #1e3a24;
@@ -658,12 +747,14 @@ if ($generatedReportsQuery) {
     <!-- LEFT SIDEBAR VIEW MATRIX CONTROLLER -->
     <div class="sidebar-panel">
         <div>
+            <!-- Branding Title -->
             <div class="d-flex align-items-center gap-2 px-2 mb-4">
                 <img src="../images/LOGO.png" alt="Tharu Logo" class="brand-logo-img rounded">
                 <h5 class="fw-bold mb-0 text-white font-monospace">THARU OWNER</h5>
             </div>
             <hr style="border-color: rgba(255,255,255,0.1);">
             
+            <!-- Navigation links utilizing Bootstrap standard data-bs-toggle for tab control -->
             <div class="nav flex-column" id="dashboardTabs" role="tablist">
                 <a class="nav-dash-link <?= $active_tab === 'panel-analytics' ? 'active' : '' ?>" id="tab-analytics" data-bs-toggle="tab" href="#panel-analytics" role="tab"><i class="bi bi-bar-chart-line-fill me-2"></i> Sales Analytics</a>
                 <a class="nav-dash-link <?= $active_tab === 'panel-salary' ? 'active' : '' ?>" id="tab-salary" data-bs-toggle="tab" href="#panel-salary" role="tab"><i class="bi bi-calculator-fill me-2"></i> Salary Calculator</a>
@@ -674,6 +765,7 @@ if ($generatedReportsQuery) {
             </div>
         </div>
 
+        <!-- Safe sign-out anchor button -->
         <div class="sidebar-profile-footer">
             <a href="../auth/logout.php" class="text-danger text-decoration-none d-flex align-items-center gap-2 small fw-bold" style="letter-spacing: 0.3px;">
                 <i class="bi bi-box-arrow-right"></i> Sign out user
@@ -684,7 +776,8 @@ if ($generatedReportsQuery) {
     <!-- MAIN DASHBOARD DATA VIEWPORT -->
     <div class="main-content">
         
-<div class="tab-content" id="dashboardTabContent">
+        <!-- Tab Content Wrapper -->
+        <div class="tab-content" id="dashboardTabContent">
             
             <!-- ================= TAB 1: SALES & PERFORMANCE METRIC WAVES ================= -->
             <div class="tab-pane fade <?= $active_tab === 'panel-analytics' ? 'show active' : '' ?>" id="panel-analytics" role="tabpanel">
@@ -695,7 +788,9 @@ if ($generatedReportsQuery) {
                     </div>
                 </div>
 
+                <!-- Snapshot Info Widgets block -->
                 <div class="row g-4 mb-4">
+                    <!-- Total Sales Indicator -->
                     <div class="col-12 col-md-6 col-xl-3">
                         <div class="stat-card-dark shadow-sm h-100">
                             <span class="text-white-50 small text-uppercase">Total Sales</span>
@@ -703,6 +798,7 @@ if ($generatedReportsQuery) {
                             <span class="text-success small fw-bold">▲ Live</span> <span class="text-white-50 small">database metric</span>
                         </div>
                     </div>
+                    <!-- Computed Margin Rate -->
                     <div class="col-12 col-md-6 col-xl-3">
                         <div class="stat-card-light shadow-sm h-100">
                             <span class="text-muted small text-uppercase">Net Profit Margin</span>
@@ -710,6 +806,7 @@ if ($generatedReportsQuery) {
                             <span class="text-success small fw-bold">Calculated</span> <span class="text-muted small">rate</span>
                         </div>
                     </div>
+                    <!-- Total recorded payouts indicator -->
                     <div class="col-12 col-md-6 col-xl-3">
                         <div class="stat-card-light shadow-sm h-100">
                             <span class="text-muted small text-uppercase">Operating Overhead</span>
@@ -717,6 +814,7 @@ if ($generatedReportsQuery) {
                             <span class="text-danger small fw-bold">▼ Tracked</span> <span class="text-muted small">payouts</span>
                         </div>
                     </div>
+                    <!-- Overall Computed Net Balance Indicator -->
                     <div class="col-12 col-md-6 col-xl-3">
                         <div class="stat-card-light shadow-sm h-100">
                             <span class="text-muted small text-uppercase">Net Return Asset</span>
@@ -726,7 +824,7 @@ if ($generatedReportsQuery) {
                     </div>
                 </div>
 
-                <!-- Equal-size analytics charts row (same level & size) -->
+                <!-- Equal-size analytics charts row containing mini canvases -->
                 <div class="row g-4 mb-4">
                     <div class="col-12 col-md-6 col-xl-3">
                         <div class="mini-chart-card p-3 h-100 d-flex flex-column">
@@ -754,6 +852,7 @@ if ($generatedReportsQuery) {
                     </div>
                 </div>
 
+                <!-- Large Multi-line Wave Graph -->
                 <div class="card border-0 shadow-sm p-4 rounded-4 mb-4">
                     <h5 class="fw-bold text-dark mb-4">Sales vs Expense Waves Summary</h5>
                     <div style="height: 350px; width: 100%;">
@@ -761,7 +860,9 @@ if ($generatedReportsQuery) {
                     </div>
                 </div>
 
+                <!-- Transaction lists (Sales and Expenses Tables) -->
                 <div class="row g-4">
+                    <!-- Sales detailed list table -->
                     <div class="col-lg-6">
                         <div class="card border-0 shadow-sm p-4 rounded-4">
                             <h5 class="fw-bold text-dark mb-3">Sales</h5>
@@ -783,6 +884,7 @@ if ($generatedReportsQuery) {
                             </div>
                         </div>
                     </div>
+                    <!-- Expenses detailed list table -->
                     <div class="col-lg-6">
                         <div class="card border-0 shadow-sm p-4 rounded-4">
                             <h5 class="fw-bold text-dark mb-3">Expenses</h5>
@@ -812,6 +914,7 @@ if ($generatedReportsQuery) {
                     <h4 class="fw-bold text-dark mb-1"><i class="bi bi-calculator-fill me-2 text-success"></i>Salary Provisioning Calculator Portal</h4>
                     <p class="text-muted small mb-4">Select an operator from your live employee roster to run operations.</p>
 
+                    <!-- Alert boxes for script processing feedback -->
                     <?php if (!empty($salary_success_msg)): ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <?= htmlspecialchars($salary_success_msg) ?>
@@ -834,6 +937,7 @@ if ($generatedReportsQuery) {
                                     <input type="hidden" name="action" value="record_ot_amount">
                                     <input type="hidden" name="tab" value="panel-salary">
                                     
+                                    <!-- Employee selector, triggers JS to update variables across forms -->
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-dark">Target Employee Operator</label>
                                         <select class="form-select border employeeSelectClass" id="employeeSelect" name="employee_id" onchange="syncEmployeeSelections(this.value); loadMonthlySalaryDetails();" required>
@@ -850,6 +954,7 @@ if ($generatedReportsQuery) {
                                         </select>
                                     </div>
 
+                                    <!-- Attendance Log Selector; fetches log data automatically on pick -->
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-secondary">Attendance Record</label>
                                         <select class="form-select border" id="attendanceSelect" name="attendance_id" onchange="loadAttendanceData()" required>
@@ -869,11 +974,13 @@ if ($generatedReportsQuery) {
                                         </select>
                                     </div>
 
+                                    <!-- Readonly readout for chosen date details -->
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-secondary">Login / Logout Times</label>
                                         <input type="text" id="attendanceSummary" class="form-control bg-light" readonly>
                                     </div>
 
+                                    <!-- Hourly computation readouts computed via JS -->
                                     <div class="row g-2 mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label small text-muted">OT Rate Per Hour (LKR)</label>
@@ -885,6 +992,7 @@ if ($generatedReportsQuery) {
                                         </div>
                                     </div>
 
+                                    <!-- Bold display of generated OT money equivalent -->
                                     <div class="p-3 rounded-3 text-start mb-3" style="background-color: var(--mint-light);">
                                         <h6 class="text-success fw-bold text-uppercase mb-1 small">Calculated OT Amount</h6>
                                         <div class="fs-4 fw-bold text-dark" id="displayOtAmount">LKR 0.00</div>
@@ -904,6 +1012,7 @@ if ($generatedReportsQuery) {
                                     <input type="hidden" name="action" value="record_total_salary">
                                     <input type="hidden" name="tab" value="panel-salary">
                                     
+                                    <!-- Employee selector, synchronized across tabs -->
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-dark">Target Employee Operator</label>
                                         <select class="form-select border employeeSelectClass" id="employeeSelectMonthly" name="employee_id" onchange="syncEmployeeSelections(this.value); loadMonthlySalaryDetails();" required>
@@ -918,6 +1027,7 @@ if ($generatedReportsQuery) {
                                         </select>
                                     </div>
 
+                                    <!-- Parameter selections: trigger AJAX refresh when month is changed -->
                                     <div class="row g-2 mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label small fw-bold text-secondary">Choose Month</label>
@@ -929,6 +1039,7 @@ if ($generatedReportsQuery) {
                                         </div>
                                     </div>
 
+                                    <!-- View fields populated automatically by AJAX -->
                                     <div class="row g-2 mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label small text-muted">Base Salary (LKR)</label>
@@ -940,11 +1051,13 @@ if ($generatedReportsQuery) {
                                         </div>
                                     </div>
 
+                                    <!-- Admin configurable bonus entry field -->
                                     <div class="mb-3">
                                         <label class="form-label small text-muted">Performance Bonus (LKR)</label>
                                         <input type="number" id="monthlyBonus" class="form-control" name="bonus_pay" value="0" oninput="calculateMonthlyTotal()">
                                     </div>
 
+                                    <!-- Sum total readout interface display -->
                                     <div class="p-3 rounded-3 text-start mb-3" style="background-color: var(--mint-light);">
                                         <h6 class="text-success fw-bold text-uppercase mb-1 small">Total Salary for Month</h6>
                                         <div class="fs-3 fw-bold text-dark" id="displayMonthlyTotal">LKR 0.00</div>
@@ -964,6 +1077,7 @@ if ($generatedReportsQuery) {
                 <div class="card border-0 shadow-sm p-4 rounded-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-bar-graph-fill me-2 text-success"></i>Monthly Profit Reports</h5>
 
+                    <!-- User status messaging -->
                     <?php if (!empty($report_success_msg)): ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <?= htmlspecialchars($report_success_msg) ?>
@@ -977,6 +1091,7 @@ if ($generatedReportsQuery) {
                         </div>
                     <?php endif; ?>
 
+                    <!-- Form logic generating backend report variables via POST cycle -->
                     <form method="POST" action="owner_dashboard.php?tab=panel-reports" class="row g-3 align-items-end mb-4">
                         <input type="hidden" name="action" value="generate_profit_report">
                         <input type="hidden" name="tab" value="panel-reports">
@@ -987,6 +1102,8 @@ if ($generatedReportsQuery) {
                         <div class="col-md-4">
                             <button type="submit" class="btn btn-success px-4 py-2 fw-bold rounded-pill shadow-sm">Generate Report</button>
                         </div>
+                        
+                        <!-- File type desired selection input box -->
                         <div class="col-md-3">
                             <select class="form-select" id="reportExportFormat" name="download_format">
                                 <option value="pdf" <?= $download_format === 'pdf' ? 'selected' : '' ?>>Download PDF</option>
@@ -997,13 +1114,18 @@ if ($generatedReportsQuery) {
                         </div>
                     </form>
 
+                    <!-- Dynamically renders the preview window only if generation returned valid data rows -->
                     <?php if ($report_generated): ?>
+                        
+                        <!-- Manual backup download triggers relying on frontend extraction methods -->
                         <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="exportReport('pdf')">Export PDF</button>
                             <button type="button" class="btn btn-outline-success btn-sm" onclick="exportReport('xlsx')">Export XLSX</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportReport('png')">Export PNG</button>
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportReport('jpeg')">Export JPEG</button>
                         </div>
+                        
+                        <!-- Container identified as target for HTML-to-Image / PDF cloning libraries -->
                         <div id="reportPreview" class="border rounded-4 p-4 mt-3" style="background: linear-gradient(135deg, #f7fff7 0%, #ffffff 100%);">
                             <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                                 <div>
@@ -1011,6 +1133,8 @@ if ($generatedReportsQuery) {
                                     <div class="text-muted small">Generated for <?= htmlspecialchars($selected_report_month) ?></div>
                                 </div>
                             </div>
+                            
+                            <!-- Financial overview cards subset -->
                             <div class="row g-4 mb-4">
                                 <div class="col-md-4">
                                     <div class="card border-0 bg-light p-3 rounded-3">
@@ -1031,12 +1155,17 @@ if ($generatedReportsQuery) {
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Tabular presentation blocks inside PDF template window -->
                             <div class="row g-4">
                                 <div class="col-lg-8">
+                                    <!-- Dedicated computed Profit readout -->
                                     <div class="card border-0 p-3 rounded-3" style="background-color: var(--mint-light);">
                                         <div class="small text-uppercase text-success fw-bold">Net Profit</div>
                                         <div class="fs-3 fw-bold text-dark">LKR <?= number_format($report_net_profit, 2) ?></div>
                                     </div>
+                                    
+                                    <!-- Generated Sales table chunk -->
                                     <div class="table-responsive mt-4">
                                         <table class="table table-sm custom-table border align-middle mb-0">
                                             <thead>
@@ -1056,6 +1185,8 @@ if ($generatedReportsQuery) {
                                             </tbody>
                                         </table>
                                     </div>
+                                    
+                                    <!-- Generated Expenses table chunk -->
                                     <div class="table-responsive mt-4">
                                         <table class="table table-sm custom-table border align-middle mb-0">
                                             <thead>
@@ -1076,6 +1207,7 @@ if ($generatedReportsQuery) {
                                         </table>
                                     </div>
                                 </div>
+                                <!-- Chart.js canvas targeted rendering location -->
                                 <div class="col-lg-4">
                                     <canvas id="profitReportChart" height="240"></canvas>
                                 </div>
@@ -1083,6 +1215,7 @@ if ($generatedReportsQuery) {
                         </div>
                     <?php endif; ?>
 
+                    <!-- Bottom log list: Previous historical reports generated by users -->
                     <div class="table-responsive mt-4">
                         <table class="table custom-table border align-middle mb-0">
                             <thead>
@@ -1117,6 +1250,7 @@ if ($generatedReportsQuery) {
                 <div class="card border-0 shadow-sm p-4 rounded-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-credit-card-2-front-fill me-2 text-success"></i>Employee Ledger & Payout Settlement Logs</h5>
                     <div class="table-responsive">
+                        <!-- Displays flat listing mapping out successfully distributed payment entries -->
                         <table class="table custom-table border align-middle mb-0">
                             <thead>
                                 <tr>
@@ -1152,6 +1286,7 @@ if ($generatedReportsQuery) {
                 <div class="card border-0 shadow-sm p-4 rounded-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-people-fill me-2 text-success"></i>Active Verified Customer Profile Indexes</h5>
                     <div class="table-responsive">
+                        <!-- Presents raw customer metric variables for easy lookup mapping -->
                         <table class="table custom-table border align-middle mb-0">
                             <thead>
                                 <tr>
@@ -1183,6 +1318,7 @@ if ($generatedReportsQuery) {
                         <h5 class="fw-bold text-dark mb-0"><i class="bi bi-tools me-2 text-success"></i>Corporate Employee Resource Provisioning Matrix</h5>
                     </div>
 
+                    <!-- Role adjustment action status alerts context layout -->
                     <?php if (!empty($salary_success_msg) && $active_tab === 'panel-employees'): ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <?= htmlspecialchars($salary_success_msg) ?>
@@ -1213,10 +1349,12 @@ if ($generatedReportsQuery) {
                                         <td><?= htmlspecialchars($member['username'] ?? '') ?></td>
                                         <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($member['role'] ?? 'System Asset') ?></span></td>
                                         <td class="text-center">
+                                            <!-- Inline form handling role modification -->
                                             <form method="POST" action="owner_dashboard.php?tab=panel-employees" class="d-flex flex-column gap-2">
                                                 <input type="hidden" name="action" value="update_staff">
                                                 <input type="hidden" name="tab" value="panel-employees">
                                                 <input type="hidden" name="user_id" value="<?= (int)($member['id'] ?? 0) ?>">
+                                                
                                                 <select name="role" class="form-select form-select-sm">
                                                     <option value="owner" <?= strtolower((string)($member['role'] ?? '')) === 'owner' ? 'selected' : '' ?>>Owner</option>
                                                     <option value="stocksup" <?= strtolower((string)($member['role'] ?? '')) === 'stocksup' ? 'selected' : '' ?>>Stock Supervisor</option>
@@ -1228,6 +1366,8 @@ if ($generatedReportsQuery) {
                                                 </select>
                                                 <button type="submit" class="btn btn-sm btn-outline-primary">Update</button>
                                             </form>
+                                            
+                                            <!-- Dedicated GET link deletion executioner tool block -->
                                             <a href="owner_dashboard.php?delete_staff=<?= (int)($member['id'] ?? 0) ?>" class="btn btn-sm btn-outline-danger mt-2" onclick="return confirm('Confirm removal of operator account from security index?')">Delete User Asset</a>
                                         </td>
                                     </tr>
@@ -1243,9 +1383,17 @@ if ($generatedReportsQuery) {
 </div>
 
 <script>
+/** 
+ * DOM Scripting & Frontend Processing Layer
+ * Includes Salary form handling, DOM manipulation hooks, and data calculations routines.
+ */
 let currentOtHours = 0;
 let currentOtRate = 0;
 
+/**
+ * Standardizes raw HH:MM:SS string parsing into JavaScript Date objects.
+ * Returns null if format fails layout check tests.
+ */
 function parseTimeValue(inputValue) {
     if (!inputValue) {
         return null;
@@ -1257,9 +1405,13 @@ function parseTimeValue(inputValue) {
     const hours = parseInt(parts[0], 10) || 0;
     const minutes = parseInt(parts[1], 10) || 0;
     const seconds = parseInt(parts[2], 10) || 0;
+    // Base a dummy date for reliable milliseconds extraction
     return new Date(2000, 0, 1, hours, minutes, seconds);
 }
 
+/**
+ * Calculates time differences identifying surplus hours past standard 8-hour shift structure bounds.
+ */
 function calculateOvertimeHours(loginValue, logoutValue) {
     const loginTime = parseTimeValue(loginValue);
     const logoutTime = parseTimeValue(logoutValue);
@@ -1267,14 +1419,20 @@ function calculateOvertimeHours(loginValue, logoutValue) {
         return 0;
     }
     let workedMs = logoutTime.getTime() - loginTime.getTime();
+    
+    // Correct overflow error if shift wraps night cycle to next morning frame
     if (workedMs < 0) {
         workedMs += 24 * 60 * 60 * 1000;
     }
     const workedHours = workedMs / (1000 * 60 * 60);
     const overtimeHours = workedHours > 8 ? workedHours - 8 : 0;
+    
     return overtimeHours > 0 ? overtimeHours : 0;
 }
 
+/**
+ * Replicates active dropdown choice state across mirrored selection elements
+ */
 function syncEmployeeSelections(val) {
     const selects = document.querySelectorAll('.employeeSelectClass');
     selects.forEach(s => {
@@ -1284,10 +1442,14 @@ function syncEmployeeSelections(val) {
     });
 }
 
+/**
+ * Executes field hydration upon attendance selector alteration inside OT sub-calculator
+ */
 function loadAttendanceData() {
     const select = document.getElementById('attendanceSelect');
     const selectedOption = select.options[select.selectedIndex];
     
+    // Clear out readouts if user chooses null option layout
     if (!selectedOption || !selectedOption.value) {
         document.getElementById('attendanceSummary').value = '';
         document.getElementById('displayOtRate').value = 0;
@@ -1302,7 +1464,7 @@ function loadAttendanceData() {
     const accountName = selectedOption.getAttribute('data-accountant') || '';
     const otRate = parseFloat(selectedOption.getAttribute('data-ot-rate')) || 0;
     
-    // Automatically set the employee select if they select attendance record first
+    // Automatically trigger matched index profile across mirrored fields layout
     const accountantUserId = selectedOption.getAttribute('data-accountant-userid');
     if (accountantUserId) {
         syncEmployeeSelections(accountantUserId);
@@ -1317,6 +1479,9 @@ function loadAttendanceData() {
     calculateOtAmount();
 }
 
+/**
+ * Drives UI rendering metric for computed OT monetary payload
+ */
 function calculateOtAmount() {
     const otRate = parseFloat(document.getElementById('displayOtRate').value) || 0;
     const otHours = parseFloat(document.getElementById('otHours').value) || 0;
@@ -1326,6 +1491,10 @@ function calculateOtAmount() {
     document.getElementById('otPayHidden').value = otAmount.toFixed(2);
 }
 
+/**
+ * Requests backend salary configuration blocks asynchronously via native Fetch API.
+ * Pulls cumulative sum total structures of prior database iterations.
+ */
 function loadMonthlySalaryDetails() {
     const employeeId = document.getElementById('employeeSelectMonthly').value;
     const month = document.getElementById('salaryMonth').value;
@@ -1337,6 +1506,7 @@ function loadMonthlySalaryDetails() {
         return;
     }
     
+    // Calls embedded AJAX logic controller defined at document top lines execution scope
     fetch(`owner_dashboard.php?ajax_action=get_salary_details&employee_id=${employeeId}&month=${month}`)
         .then(res => res.json())
         .then(data => {
@@ -1355,6 +1525,9 @@ function loadMonthlySalaryDetails() {
         });
 }
 
+/**
+ * Handles additive math calculation logic rendering for total monthly payout matrix forms
+ */
 function calculateMonthlyTotal() {
     const base = parseFloat(document.getElementById('monthlyBaseSalary').value) || 0;
     const ot = parseFloat(document.getElementById('monthlyOtTotal').value) || 0;
@@ -1365,6 +1538,12 @@ function calculateMonthlyTotal() {
     document.getElementById('monthlyTotalHidden').value = total.toFixed(2);
 }
 
+/**
+ * Facilitates the generation block converting HTML rendering canvas views directly into standalone files.
+ * Uses html2canvas, jsPDF, and sheetJS routines attached previously in head scripts section.
+ * 
+ * @param {string} format - The file formatting profile rule extension identifier string.
+ */
 function exportReport(format) {
     const preview = document.getElementById('reportPreview');
     if (!preview) {
@@ -1376,6 +1555,7 @@ function exportReport(format) {
     const filename = `profit-report-${monthValue}`;
     const reportData = window.reportExportData || { salesTotal: 0, expensesTotal: 0, netProfit: 0, salesRows: [], expenseRows: [] };
 
+    // Handler logic branch translating database lists towards XLSX Excel format spreadsheet objects
     if (format === 'xlsx') {
         const rows = [
             ['THARU PRODUCTS MONTHLY PROFIT REPORT'],
@@ -1396,6 +1576,8 @@ function exportReport(format) {
         (reportData.expenseRows || []).forEach(function (expense) {
             rows.push([expense.type || '', `LKR ${Number(expense.amount || 0).toFixed(2)}`]);
         });
+        
+        // Execute structural render map translations building binary outputs natively via sheet.js logic
         const ws = XLSX.utils.aoa_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Report');
@@ -1403,8 +1585,11 @@ function exportReport(format) {
         return;
     }
 
+    // Capture visual representation using html2canvas rendering engine module hooks
     html2canvas(preview, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function (canvas) {
         const imageUrl = canvas.toDataURL(format === 'jpeg' ? 'image/jpeg' : 'image/png');
+        
+        // Push standalone images via hidden link nodes clicked explicitly
         if (format === 'png' || format === 'jpeg') {
             const link = document.createElement('a');
             link.href = imageUrl;
@@ -1413,28 +1598,38 @@ function exportReport(format) {
             return;
         }
 
+        // Compute page wrapping offsets ensuring clean pagination splitting rules for jsPDF execution flow blocks
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = pageWidth - 20;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
         let position = 10;
         let heightLeft = imgHeight;
+        
         pdf.addImage(imageUrl, 'PNG', 10, position, imgWidth, imgHeight);
         heightLeft -= pageHeight - 20;
+        
+        // Inject multiple pages traversing down layout until exhausted layout pixels
         while (heightLeft > 0) {
             position = heightLeft - imgHeight + 10;
             pdf.addPage();
             pdf.addImage(imageUrl, 'PNG', 10, position, imgWidth, imgHeight);
             heightLeft -= pageHeight - 20;
         }
+        
         pdf.save(`${filename}.pdf`);
     });
 }
 
-// Chart.js gradient pipeline setup
+/** 
+ * Chart.js Graphic Layout Initialization Sequence Engine
+ * Instantiates responsive chart context layers applying predefined theme settings logic structures based on metrics variables
+ */
 document.addEventListener("DOMContentLoaded", function () {
+    // Preserve variables inside Javascript Object namespace to guarantee export utilities can consume data structures safely
     window.reportExportData = {
         salesTotal: <?= json_encode($report_sales_total) ?>,
         expensesTotal: <?= json_encode($report_expenses_total) ?>,
@@ -1443,6 +1638,7 @@ document.addEventListener("DOMContentLoaded", function () {
         expenseRows: <?= json_encode($report_expense_rows) ?>
     };
 
+    // Keep tabs preserved when reloading page contexts using URL hash references tracking
     const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
     tabLinks.forEach(function (tabLink) {
         tabLink.addEventListener('shown.bs.tab', function () {
@@ -1456,10 +1652,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // Chart #1 - Primary Area Wave Chart
     const analyticsCtx = document.getElementById('waveAnalyticsChart');
     if (analyticsCtx) {
         const ctx = analyticsCtx.getContext('2d');
         
+        // Define color gradients rules rendering visual fading transitions
         const gradientSales = ctx.createLinearGradient(0, 0, 0, 350);
         gradientSales.addColorStop(0, 'rgba(46, 125, 50, 0.45)');
         gradientSales.addColorStop(1, 'rgba(46, 125, 50, 0.00)');
@@ -1513,7 +1711,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 1. Total Sales Mini Bar Chart
+    // Chart #2: Total Sales Mini Bar Chart
     const tsCtx = document.getElementById('chartTotalSales');
     if (tsCtx) {
         new Chart(tsCtx.getContext('2d'), {
@@ -1540,7 +1738,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 2. Net Profit Margin Mini Doughnut Chart
+    // Chart #3: Net Profit Margin Mini Doughnut Chart
     const pmCtx = document.getElementById('chartProfitMargin');
     if (pmCtx) {
         new Chart(pmCtx.getContext('2d'), {
@@ -1562,7 +1760,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 3. Operating Overhead Mini Bar Chart
+    // Chart #4: Operating Overhead Mini Bar Chart
     const ohCtx = document.getElementById('chartOperatingOverhead');
     if (ohCtx) {
         new Chart(ohCtx.getContext('2d'), {
@@ -1589,7 +1787,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 4. Net Return Asset Mini Doughnut Chart
+    // Chart #5: Net Return Asset Mini Doughnut Chart
     const raCtx = document.getElementById('chartNetReturnAsset');
     if (raCtx) {
         new Chart(raCtx.getContext('2d'), {
@@ -1611,6 +1809,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // Chart #6: Report Export PDF Visual Chart
     const reportChartCtx = document.getElementById('profitReportChart');
     if (reportChartCtx) {
         new Chart(reportChartCtx.getContext('2d'), {
@@ -1634,6 +1833,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // Bootstrap Tab Activation Fallback Routing Logic Map Check
     const hash = window.location.hash;
     if (hash) {
         const triggerEl = document.querySelector(`[href="${hash}"]`);
@@ -1648,14 +1848,16 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Automated trigger downloading reports directly after post reload frame completions when necessary flags persist set 
     if (window.reportExportData && <?= json_encode($report_generated) ?> && <?= json_encode($auto_download_format) ?>) {
         setTimeout(function () {
             exportReport(<?= json_encode($auto_download_format) ?>);
-        }, 400);
+        }, 400); // Wait milliseconds permitting UI Canvas to paint first
     }
 });
 </script>
 
+<!-- Scripts loading core Bootstrap JavaScript functionalities matching library requirements -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

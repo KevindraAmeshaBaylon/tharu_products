@@ -1,40 +1,68 @@
 <?php
-// 1. OBLITERATE REDIRECT ERRORS (Must be the absolute first things in the file)
+/**
+ * User Authentication Interface (Sign In and Sign Up)
+ * File: auth/login.php
+ * 
+ * This file serves as the main entrance for user authentication in the system.
+ * It handles:
+ * 1. User session initialization.
+ * 2. Database connection configuration.
+ * 3. Sign In processing (authentication, password verification, role retrieval, and redirection).
+ * 4. Sign Up processing (validation, duplication check, inserting new customer profiles).
+ * 5. Interactive UI layout using a CSS glassmorphism slide panel effect.
+ */
+
+// 1. OBLITERATE REDIRECT ERRORS (Must be the absolute first things in the file to avoid "headers already sent" issues)
+// Start a session to enable user session storage across pages
 session_start();
+
+// Include the database configuration file for MySQL connection setup
 require_once __DIR__ . '/../model/config/database.php';
 
+// Establish a database connection handle using the helper function defined in database.php
 $conn = getDBConnection();
+
+// Initialize variables to hold feedback messages for the user interface
 $error_message = "";
 $success_message = "";
 
 // --- SIGN IN PROCESSOR ---
+// Process the form submission when the user clicks 'Log in' (action = signin)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'signin') {
+    // Sanitize and trim input fields to prevent accidental whitespace issues
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
+    // Check that both inputs are not empty
     if (!empty($username) && !empty($password)) {
-        // Fetch role along with user details
+        // Prepare a parameterized query to fetch the user by username OR email (prevents SQL injection)
         $stmt = $conn->prepare("SELECT userID, username, password, email, role FROM user_tbl WHERE username = ? OR email = ? LIMIT 1");
         $stmt->bind_param("ss", $username, $username);
         $stmt->execute();
         $result = $stmt->get_result();
 
+        // Check if exactly one matching record was retrieved from the database
         if ($result && $result->num_rows === 1) {
             $user = $result->fetch_assoc();
             $storedPassword = (string)($user['password'] ?? '');
 
+            // Verify password using two strategies: direct cleartext comparison OR hashed validation
             $passwordMatches = ($password === $storedPassword) || password_verify($password, $storedPassword);
+            
             if ($passwordMatches) {
+                // Store user identification and profile details in the session
                 $_SESSION['user_id'] = $user['userID'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['role'] = strtolower(trim((string)$user['role']));
 
                 $role = $_SESSION['role'] ?: '';
-                $dashboardFile = 'cust_dashboard.php';
+                $dashboardFile = 'cust_dashboard.php'; // Default dashboard fallback is the Customer dashboard
 
-                // If the role is missing or invalid, infer it from accountant profile data.
+                // Define all valid roles inside the system architecture
                 $validRoles = ['owner', 'stocksup', 'accountant', 'salessup', 'worker', 'driver', 'cust'];
+                
+                // If the user's role field is empty or unrecognized, run a lookup to see if they exist in the Accountant table
                 if ($role === '' || !in_array($role, $validRoles, true)) {
                     $roleStmt = $conn->prepare("SELECT accountantID FROM Accountant_tbl WHERE userID = ? LIMIT 1");
                     if ($roleStmt) {
@@ -42,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $roleStmt->execute();
                         $roleRes = $roleStmt->get_result();
                         if ($roleRes && $roleRes->num_rows === 1) {
+                            // If found, implicitly assign the 'accountant' role
                             $role = 'accountant';
                             $_SESSION['role'] = $role;
                         }
@@ -49,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                 }
 
+                // Additional step for Accountants: load their specific Accountant ID for system records
                 if ($role === 'accountant') {
                     $accStmt = $conn->prepare("SELECT accountantID FROM Accountant_tbl WHERE userID = ? LIMIT 1");
                     if ($accStmt) {
@@ -57,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         $accRes = $accStmt->get_result();
                         if ($accRes && $accRes->num_rows === 1) {
                             $accRow = $accRes->fetch_assoc();
+                            // Save the accountant identifier to session storage
                             $_SESSION['accountant_id'] = $accRow['accountantID'];
                         } else {
                             $error_message = 'Accountant profile not found for this user. Please contact the administrator.';
@@ -67,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                 }
 
+                // If no profile loading error has occurred, redirect the user to their designated dashboard
                 if (empty($error_message)) {
                     switch ($role) {
                         case 'owner':
@@ -93,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                             break;
                     }
 
+                    // Perform redirect to the calculated dashboard destination
                     $redirectUrl = '../view/' . $dashboardFile;
                     header('Location: ' . $redirectUrl);
                     exit;
@@ -107,12 +140,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error_message = 'Please fill in all details.';
     }
 }
+
+// --- SIGN UP PROCESSOR ---
+// Process the form submission when the user clicks 'Sign Up' (action = signup)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'signup') {
+    // Sanitize parameters from the post request
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
-    $password = trim($_POST['password']); // This collects the raw password string
+    $password = trim($_POST['password']); // Collects raw password string
     
+    // Check that all required inputs are populated
     if (!empty($username) && !empty($email) && !empty($password)) {
+        // Pre-check: Ensure the username or email does not already exist in the user table
         $checkStmt = $conn->prepare("SELECT userID FROM user_tbl WHERE username = ? OR email = ? LIMIT 1");
         $checkStmt->bind_param("ss", $username, $email);
         $checkStmt->execute();
@@ -121,12 +160,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($checkResult->num_rows > 0) {
             $error_message = "Username or Registration Email addresses already configured.";
         } else {
-            // REMOVED: $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+            // Note: In this specific implementation, password hashing is disabled 
+            // and the raw password string is stored directly in the database.
+            $defaultRole = 'cust'; // New registrations default to the 'cust' (Customer) role
             
-            $defaultRole = 'cust';
+            // Prepare insert statement
             $insertStmt = $conn->prepare("INSERT INTO user_tbl (username, password, email, role) VALUES (?, ?, ?, ?)");
-            
-            // CHANGED: Passing the raw $password variable directly into the query
             $insertStmt->bind_param("ssss", $username, $password, $email, $defaultRole);
             
             if ($insertStmt->execute()) {
@@ -141,15 +180,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 ?>
 
-<?php require_once __DIR__ . '/../includes/header.php'; ?>
+<?php 
+// Load the central application header containing styles, meta tags, and script references
+require_once __DIR__ . '/../includes/header.php'; 
+?>
 
-<!-- External Layout Icons & Fonts -->
+<!-- External Layout Icons & Fonts (Bootstrap Icons, Plus Jakarta Sans from Google Fonts) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
+    /* 
+     * Body Layout Styling
+     * Sets a high-quality farm landscape background photo, centers content vertically and horizontally,
+     * and uses the premium font family 'Plus Jakarta Sans'.
+     */
     body {
         background: url('https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
         background-size: cover;
@@ -162,6 +209,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         padding: 20px;
     }
 
+    /* 
+     * Main Card Wrapper
+     * A translucent glass container wrapping both forms (login/signup) and the sliding graphic overlay.
+     */
     #mainWrapper {
         width: 100%;
         max-width: 900px;
@@ -174,6 +225,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
     }
 
+    /* 
+     * Form Panel Side (Base styling for both forms)
+     * Sets dimensions, padding, alignment, and sets transition durations for the slide animation.
+     */
     .form-panel-side {
         position: absolute;
         top: 0;
@@ -188,9 +243,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         border-radius: 40px 0 0 40px;
     }
 
+    /* Position settings for individual views */
     .signin-panel-view { left: 0; z-index: 2; opacity: 1; }
     .signup-panel-view { left: 0; opacity: 0; z-index: 1; }
 
+    /* 
+     * CSS state change styles triggered when class 'right-panel-active' is applied to #mainWrapper
+     * Hides sign-in panel and slides sign-up panel into view.
+     */
     #mainWrapper.right-panel-active .signin-panel-view {
         transform: translateX(100%);
         opacity: 0;
@@ -204,6 +264,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         border-radius: 0 40px 40px 0;
     }
 
+    /* 
+     * Sliding Overlay Container
+     * Displays a glassmorphic background layer covering half of the card, sliding back and forth.
+     */
     .slider-container-overlay {
         position: absolute;
         top: 0;
@@ -219,12 +283,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         border-left: 1px solid rgba(255, 255, 255, 0.2);
     }
 
+    /* Slides the overlay cover to the left when register view is active */
     #mainWrapper.right-panel-active .slider-container-overlay {
         transform: translateX(-100%);
         border-left: none;
         border-right: 1px solid rgba(255, 255, 255, 0.2);
     }
 
+    /* 
+     * Slider Track
+     * Houses both sliding text panels. The width is set to 200% to accommodate both.
+     */
     .slider-track {
         position: relative;
         left: -100%;
@@ -238,6 +307,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         transform: translateX(50%);
     }
 
+    /* 
+     * Slider Content Block
+     * Design details for the text overlay elements inside the slider tracker.
+     */
     .slider-content-block {
         position: absolute;
         display: flex;
@@ -260,6 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     .slider-block-right { right: 0; transform: translateX(0); }
     #mainWrapper.right-panel-active .slider-block-right { transform: translateX(200%); }
 
+    /* Custom form elements typography and inputs styling */
     .form-panel-side h2 {
         color: #16a34a; 
         font-weight: 800;
@@ -288,6 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         box-shadow: none !important;
     }
 
+    /* Absolute positioned eye icon to click and toggle password plain text/dots view */
     .password-toggle-eye {
         position: absolute;
         right: 18px;
@@ -298,6 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         z-index: 10;
     }
 
+    /* Green premium button styling with shadows */
     .btn-forest {
         background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
         color: #ffffff;
@@ -323,6 +399,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         cursor: pointer;
     }
 
+    /* Transparent buttons with border for overlays */
     .btn-outline-glass-action {
         border: 2px solid #ffffff;
         color: #ffffff;
@@ -341,43 +418,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 </style>
 
 <div class="d-flex flex-column align-items-center justify-content-center w-100">
+    <!-- Home Navigation Button -->
     <div class="w-100" style="max-width: 100px; display: flex; justify-content: flex-end; margin-bottom: 10px;">
         <a href="../index.php" class="btn btn-sm btn-outline-light" style="backdrop-filter: blur(12px); background: rgba(255,255,255,0.18); border: 1px solid rgba(255, 255, 255, 0.27); color: #072c13; border-radius: 999px; padding: 10px 16px; font-weight: 600; text-decoration: none; box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
             <i class="bi bi-house-door-fill me-2"></i>Home
         </a>
     </div>
     
-    <!-- Notifications -->
+    <!-- Error Notification Box -->
     <?php if(!empty($error_message)): ?>
         <div class="alert border-0 text-center w-100 mb-3" style="max-width: 900px; background: rgba(220, 53, 69, 0.95); color: #ffffff; border-radius: 16px;">
             ⚠️ <?= $error_message ?>
         </div>
     <?php endif; ?>
 
+    <!-- Success Notification Box -->
     <?php if(!empty($success_message)): ?>
         <div class="alert border-0 text-center w-100 mb-3" style="max-width: 900px; background: #16a34a; color: #ffffff; border-radius: 16px;">
             ✓ <?= $success_message ?>
         </div>
     <?php endif; ?>
 
-    <!-- Master UI Card -->
+    <!-- Master UI Card Containing forms and animations -->
     <div id="mainWrapper">
         
         <!-- SIGN UP VIEW -->
         <div class="form-panel-side signup-panel-view">
             <form action="" method="POST">
+                <!-- Action identifier for POST router -->
                 <input type="hidden" name="action" value="signup">
                 <h2>Join Us</h2>
                 <p class="mb-4 text-muted small">Register your new system access profile.</p>
                 
+                <!-- Username field -->
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control form-control-glass" placeholder="Username" required autocomplete="off">
                 </div>
                 
+                <!-- Email field -->
                 <div class="mb-3">
                     <input type="email" name="email" class="form-control form-control-glass" placeholder="Email Address" required autocomplete="off">
                 </div>
                 
+                <!-- Password field with toggle visibility trigger icon -->
                 <div class="mb-4 input-group-custom">
                     <input type="password" id="signupPassword" name="password" class="form-control form-control-glass" placeholder="Password" required>
                     <i class="bi bi-eye password-toggle-eye" id="eyeSignup" onclick="toggleVisibility('signupPassword', 'eyeSignup')"></i>
@@ -391,14 +474,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <!-- SIGN IN VIEW -->
         <div class="form-panel-side signin-panel-view">
             <form action="" method="POST">
+                <!-- Action identifier for POST router -->
                 <input type="hidden" name="action" value="signin">
                 <h2>Welcome</h2>
                 <p class="mb-4 text-muted small">Access your localized dashboard matrix.</p>
                 
+                <!-- Username or email address field -->
                 <div class="mb-3">
                     <input type="text" name="username" class="form-control form-control-glass" placeholder="Username / Email" required autocomplete="off">
                 </div>
                 
+                <!-- Password input field with visibility icon trigger -->
                 <div class="mb-4 input-group-custom">
                     <input type="password" id="signinPassword" name="password" class="form-control form-control-glass" placeholder="Password" required>
                     <i class="bi bi-eye password-toggle-eye" id="eyeSignin" onclick="toggleVisibility('signinPassword', 'eyeSignin')"></i>
@@ -413,12 +499,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         <div class="slider-container-overlay">
             <div class="slider-track">
                 
+                <!-- Left panel inside slider: shown when Sign-up form is active -->
                 <div class="slider-content-block slider-block-left">
                     <h3 class="fw-bold mb-2">Back to the Herd?</h3>
                     <p class="small mb-4" style="max-width: 280px; font-weight: 500;">Access your system features and metrics safely inside.</p>
                     <button type="button" class="btn-outline-glass-action" id="toSignIn">Sign In</button>
                 </div>
                 
+                <!-- Right panel inside slider: shown when Login form is active -->
                 <div class="slider-content-block slider-block-right">
                     <h3 class="fw-bold mb-2">New to the Farm?</h3>
                     <p class="small mb-4" style="max-width: 280px; font-weight: 500;">Set up your customized business account profile here.</p>
@@ -432,6 +520,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 </div>
 
 <script>
+/**
+ * UI Event Listeners and Controllers
+ * Waits for the DOM to be fully loaded, and maps action triggers to switch form states.
+ */
 document.addEventListener("DOMContentLoaded", function() {
     const wrapper = document.getElementById('mainWrapper');
     const toSignUpBtn = document.getElementById('toSignUp');
@@ -439,25 +531,41 @@ document.addEventListener("DOMContentLoaded", function() {
     const linkToSignUp = document.getElementById('linkToSignUp');
     const linkToSignIn = document.getElementById('linkToSignIn');
 
-    function showSignUp() { if (wrapper) wrapper.classList.add("right-panel-active"); }
-    function showSignIn() { if (wrapper) wrapper.classList.remove("right-panel-active"); }
+    // Add CSS class to activate the sliding layout transition
+    function showSignUp() { 
+        if (wrapper) wrapper.classList.add("right-panel-active"); 
+    }
+    
+    // Remove CSS class to revert back to default sign-in view
+    function showSignIn() { 
+        if (wrapper) wrapper.classList.remove("right-panel-active"); 
+    }
 
+    // Attach click triggers to buttons and links
     if (toSignUpBtn) toSignUpBtn.addEventListener('click', showSignUp);
     if (toSignInBtn) toSignInBtn.addEventListener('click', showSignIn);
     if (linkToSignUp) linkToSignUp.addEventListener('click', showSignUp);
     if (linkToSignIn) linkToSignIn.addEventListener('click', showSignIn);
 });
 
+/**
+ * Toggle Password Visibility Function
+ * Swaps target input elements between 'password' and 'text' input types to show/hide raw characters
+ * and adjusts icon classes accordingly.
+ * 
+ * @param {string} inputId - ID of the target password input element
+ * @param {string} eyeId - ID of the clicking eye icon element
+ */
 function toggleVisibility(inputId, eyeId) {
     const passwordInput = document.getElementById(inputId);
     const toggleIcon = document.getElementById(eyeId);
     if (passwordInput && toggleIcon) {
         if (passwordInput.type === "password") {
             passwordInput.type = "text";
-            toggleIcon.className = "bi bi-eye-slash password-toggle-eye";
+            toggleIcon.className = "bi bi-eye-slash password-toggle-eye"; // Eye slash (show password state)
         } else {
             passwordInput.type = "password";
-            toggleIcon.className = "bi bi-eye password-toggle-eye";
+            toggleIcon.className = "bi bi-eye password-toggle-eye";       // Standard eye (hidden password state)
         }
     }
 }
